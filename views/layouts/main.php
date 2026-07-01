@@ -72,6 +72,18 @@
                     </span>
                 </a>
 
+                <?php if (in_array(\App\Core\Session::userRole(), ['super_usuario', 'administrador'])): ?>
+                <div class="pt-4 mt-4 border-t border-gray-700">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Analítica</p>
+                </div>
+
+                <a href="<?= APP_URL ?>/reportes"
+                   class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors <?= strpos($_SERVER['REQUEST_URI'], '/reportes') !== false ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' ?>">
+                    <i class="fas fa-chart-bar w-5 text-center mr-3"></i>
+                    Reportes
+                </a>
+                <?php endif; ?>
+
                 <?php if (\App\Core\Session::userRole() === 'super_usuario'): ?>
                 <div class="pt-4 mt-4 border-t border-gray-700">
                     <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Administración</p>

@@ -79,7 +79,7 @@ class ConfigController extends Controller
             }
         }
 
-        AuditService::register('configuracion_actualizada', 'configuracion', 'Configuración del sistema actualizada');
+        AuditService::register('configuracion_actualizada', 'configuracion', 'Configuración del sistema actualizada', null, 'warning');
 
         $this->redirectWith(APP_URL . '/configuracion', 'success', 'Configuración actualizada exitosamente.');
     }

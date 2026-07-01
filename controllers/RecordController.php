@@ -232,7 +232,8 @@ class RecordController extends Controller
             }
         }
 
-        AuditService::register('crear_registro', 'registros', "Registro #{$recordId} creado en: {$form->titulo}");
+        $detallesRegistro = array_merge(['formulario' => $form->titulo], $datosParaCorreo);
+        AuditService::register('crear_registro', 'registros', "Registro #{$recordId} creado en: {$form->titulo}", null, 'success', $detallesRegistro, 'record', $recordId);
 
         // Enviar email de confirmación al cliente si hay campo email en el formulario
         if ($emailCliente) {
@@ -403,7 +404,7 @@ class RecordController extends Controller
             }
         }
 
-        AuditService::register('editar_registro', 'registros', "Registro #{$id} editado");
+        AuditService::register('editar_registro', 'registros', "Registro #{$id} editado", null, 'warning', [], 'record', $id);
 
         $this->redirectWith(APP_URL . "/registros/{$id}", 'success', 'Registro actualizado exitosamente.');
     }
@@ -422,7 +423,7 @@ class RecordController extends Controller
         $db->update('records', ['estado' => 'archivado', 'updated_at' => date('Y-m-d H:i:s')],
             'id = :id', ['id' => $id]);
 
-        AuditService::register('archivar_registro', 'registros', "Registro #{$id} archivado");
+        AuditService::register('archivar_registro', 'registros', "Registro #{$id} archivado", null, 'warning', [], 'record', $id);
 
         $this->redirectWith(APP_URL . '/registros', 'success', 'Registro archivado exitosamente.');
     }
@@ -441,7 +442,7 @@ class RecordController extends Controller
         $db->update('records', ['estado' => 'activo', 'updated_at' => date('Y-m-d H:i:s'), 'deleted_at' => null],
             'id = :id', ['id' => $id]);
 
-        AuditService::register('restaurar_registro', 'registros', "Registro #{$id} restaurado");
+        AuditService::register('restaurar_registro', 'registros', "Registro #{$id} restaurado", null, 'success', [], 'record', $id);
 
         $this->redirectWith(APP_URL . '/registros', 'success', 'Registro restaurado exitosamente.');
     }
@@ -463,7 +464,7 @@ class RecordController extends Controller
 
         $db->update('records', ['deleted_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $id]);
 
-        AuditService::register('eliminar_registro', 'registros', "Registro #{$id} eliminado");
+        AuditService::register('eliminar_registro', 'registros', "Registro #{$id} eliminado", null, 'danger', [], 'record', $id);
 
         $this->redirectWith(APP_URL . '/registros', 'success', 'Registro eliminado exitosamente.');
     }

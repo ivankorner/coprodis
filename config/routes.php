@@ -62,6 +62,7 @@ $router->group(['middleware' => AuthMiddleware::class], function (Router $router
             // Auditoría
             $router->get('/auditoria', 'AuditController@index');
             $router->get('/auditoria/exportar', 'AuditController@export');
+            $router->get('/auditoria/{id}', 'AuditController@show');
 
             // Configuración
             $router->get('/configuracion', 'ConfigController@index');
@@ -82,6 +83,18 @@ $router->group(['middleware' => AuthMiddleware::class], function (Router $router
     $router->post('/registros/{id}/restaurar', 'RecordController@restore');
     $router->post('/registros/{id}/eliminar', 'RecordController@destroy');
     $router->get('/registros/{id}/historial', 'RecordController@history');
+
+    // ============================================
+    // REPORTES (Super Usuario y Administrador)
+    // ============================================
+    $router->group(['middleware' => [new RoleMiddleware(['super_usuario', 'administrador'])]], function (Router $router) {
+        $router->get('/reportes', 'ReportController@index');
+        $router->get('/reportes/formulario/{id}', 'ReportController@form');
+        $router->get('/reportes/timeline', 'ReportController@timeline');
+        $router->post('/reportes/exportar/{tipo}', 'ReportController@export');
+        $router->post('/reportes/favoritos/guardar', 'ReportController@saveFavorite');
+        $router->post('/reportes/favoritos/{id}/eliminar', 'ReportController@deleteFavorite');
+    });
 
     // ============================================
     // EXPORTACIONES

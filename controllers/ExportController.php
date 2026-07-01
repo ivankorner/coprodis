@@ -31,7 +31,7 @@ class ExportController extends Controller
             $filepath = ExportService::toExcel($modulo, $result['headers'], $result['data']);
         }
 
-        AuditService::register('exportar_excel', 'exportaciones', "Exportación {$modulo} a Excel");
+        AuditService::register('exportar_excel', 'exportaciones', "Exportación {$modulo} a Excel", null, 'info', ['modulo' => $modulo, 'formato' => 'excel']);
 
         Response::download($filepath);
     }
@@ -43,7 +43,7 @@ class ExportController extends Controller
 
         $filepath = ExportService::toCsv($modulo, $result['headers'], $result['data']);
 
-        AuditService::register('exportar_csv', 'exportaciones', "Exportación {$modulo} a CSV");
+        AuditService::register('exportar_csv', 'exportaciones', "Exportación {$modulo} a CSV", null, 'info', ['modulo' => $modulo, 'formato' => 'csv']);
 
         Response::download($filepath);
     }
@@ -62,7 +62,7 @@ class ExportController extends Controller
         $view = 'exports.pdf_list';
         $filepath = ExportService::toPdf($view, $data);
 
-        AuditService::register('exportar_pdf', 'exportaciones', "Exportación {$modulo} a PDF");
+        AuditService::register('exportar_pdf', 'exportaciones', "Exportación {$modulo} a PDF", null, 'info', ['modulo' => $modulo, 'formato' => 'pdf']);
 
         Response::download($filepath);
     }
@@ -106,7 +106,7 @@ class ExportController extends Controller
 
         $filepath = ExportService::toPdf($view, $data);
 
-        AuditService::register('exportar_pdf', 'exportaciones', "Exportación {$modulo} a PDF");
+        AuditService::register('exportar_pdf', 'exportaciones', "Exportación {$modulo} a PDF individual #{$id}", null, 'info', ['modulo' => $modulo, 'formato' => 'pdf', 'id' => $id]);
 
         Response::download($filepath);
     }

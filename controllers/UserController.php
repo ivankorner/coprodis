@@ -129,7 +129,7 @@ class UserController extends Controller
 
         MailService::sendWelcome($data['email'], $data['nombre'], $password);
 
-        AuditService::register('crear_usuario', 'usuarios', "Usuario creado: {$data['email']}");
+        AuditService::register('crear_usuario', 'usuarios', "Usuario creado: {$data['email']}", null, 'success', ['email' => $data['email'], 'nombre' => $data['nombre']], 'user');
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', 'Usuario creado exitosamente. Se ha enviado un correo con las credenciales.');
     }
@@ -180,7 +180,7 @@ class UserController extends Controller
             'rol_id' => (int)$data['rol_id'],
         ], 'id = :id', ['id' => $id]);
 
-        AuditService::register('editar_usuario', 'usuarios', "Usuario editado: {$data['email']}");
+        AuditService::register('editar_usuario', 'usuarios', "Usuario editado: {$data['email']}", null, 'warning', ['email' => $data['email']], 'user', $id);
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', 'Usuario actualizado exitosamente.');
     }
@@ -199,7 +199,8 @@ class UserController extends Controller
         $db->update('users', ['estado' => $nuevoEstado], 'id = :id', ['id' => $id]);
 
         $accion = $nuevoEstado === 'activo' ? 'activar_usuario' : 'desactivar_usuario';
-        AuditService::register($accion, 'usuarios', "Usuario {$nuevoEstado}: {$user->email}");
+        $tipo = $nuevoEstado === 'activo' ? 'success' : 'warning';
+        AuditService::register($accion, 'usuarios', "Usuario {$nuevoEstado}: {$user->email}", null, $tipo, [], 'user', $id);
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', "Usuario {$nuevoEstado} exitosamente.");
     }
@@ -224,7 +225,7 @@ class UserController extends Controller
 
         MailService::sendNewPassword($user->email, $user->nombre, $password);
 
-        AuditService::register('reset_password_usuario', 'usuarios', "Contraseña restablecida: {$user->email}");
+        AuditService::register('reset_password_usuario', 'usuarios', "Contraseña restablecida: {$user->email}", null, 'warning', [], 'user', $id);
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', 'Contraseña restablecida. Se ha enviado un correo con la nueva contraseña.');
     }
@@ -246,7 +247,7 @@ class UserController extends Controller
 
         $db->update('users', ['deleted_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $id]);
 
-        AuditService::register('eliminar_usuario', 'usuarios', "Usuario eliminado: {$user->email}");
+        AuditService::register('eliminar_usuario', 'usuarios', "Usuario eliminado: {$user->email}", null, 'danger', [], 'user', $id);
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', 'Usuario eliminado exitosamente.');
     }
@@ -263,7 +264,7 @@ class UserController extends Controller
 
         $db->update('users', ['deleted_at' => null], 'id = :id', ['id' => $id]);
 
-        AuditService::register('restaurar_usuario', 'usuarios', "Usuario restaurado: {$user->email}");
+        AuditService::register('restaurar_usuario', 'usuarios', "Usuario restaurado: {$user->email}", null, 'success', [], 'user', $id);
 
         $this->redirectWith(APP_URL . '/usuarios', 'success', 'Usuario restaurado exitosamente.');
     }

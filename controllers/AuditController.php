@@ -5,7 +5,10 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Session;
+use App\Core\Database;
 use App\Services\AuditService;
+use App\Services\ExportService;
+use App\Core\Response;
 
 class AuditController extends Controller
 {
@@ -22,14 +25,17 @@ class AuditController extends Controller
             'accion' => $request->query('accion'),
             'modulo' => $request->query('modulo'),
             'user_id' => $request->query('user_id'),
+            'tipo' => $request->query('tipo'),
             'fecha_desde' => $request->query('fecha_desde'),
             'fecha_hasta' => $request->query('fecha_hasta'),
             'ip' => $request->query('ip'),
         ];
 
         $result = AuditService::getAll($page, PAGINATION_LIMIT, $filters);
+        $stats = AuditService::getStats();
+        $timeline = AuditService::getTimeline(7);
 
-        $db = \App\Core\Database::getInstance();
+        $db = Database::getInstance();
         $modulos = $db->fetchAll("SELECT DISTINCT modulo FROM audits ORDER BY modulo");
         $usuarios = $db->fetchAll("SELECT id, apellido, nombre, email FROM users WHERE deleted_at IS NULL ORDER BY apellido");
 
@@ -37,7 +43,23 @@ class AuditController extends Controller
             'filters' => $filters,
             'modulos' => $modulos,
             'usuarios' => $usuarios,
+            'stats' => $stats,
+            'timeline' => $timeline,
         ]));
+    }
+
+    public function show(Request $request): void
+    {
+        $id = (int)$request->param('id');
+        $audit = AuditService::getById($id);
+
+        if (!$audit) {
+            $this->redirectWith(APP_URL . '/auditoria', 'error', 'Registro de auditoría no encontrado.');
+        }
+
+        $this->view('audit.show', [
+            'audit' => $audit,
+        ]);
     }
 
     public function export(Request $request): void
@@ -46,27 +68,38 @@ class AuditController extends Controller
             'accion' => $request->query('accion'),
             'modulo' => $request->query('modulo'),
             'user_id' => $request->query('user_id'),
+            'tipo' => $request->query('tipo'),
             'fecha_desde' => $request->query('fecha_desde'),
             'fecha_hasta' => $request->query('fecha_hasta'),
         ];
 
         $result = AuditService::getAll(1, 10000, $filters);
 
-        $headers = ['ID', 'Usuario', 'Acción', 'Módulo', 'Descripción', 'IP', 'Fecha'];
+        $headers = [
+            'ID', 'Fecha', 'Usuario', 'Email', 'Acción', 'Módulo', 'Tipo',
+            'Descripción', 'IP', 'User Agent', 'Entidad', 'Entidad ID', 'Detalles'
+        ];
+
         $data = array_map(fn($item) => [
             $item->id,
-            ($item->apellido ?? '') . ' ' . ($item->nombre ?? ''),
+            $item->created_at,
+            ($item->apellido ?? 'Sistema') . ' ' . ($item->nombre ?? ''),
+            $item->email ?? '',
             $item->accion,
             $item->modulo,
-            $item->descripcion,
-            $item->ip,
-            $item->created_at,
+            $item->tipo_audit ?? 'info',
+            $item->descripcion ?? '',
+            $item->ip ?? '',
+            $item->user_agent ?? '',
+            $item->entidad ?? '',
+            $item->entidad_id ?? '',
+            $item->detalles ?? '',
         ], $result['data']);
 
-        $filepath = \App\Services\ExportService::toExcel('auditoria', $headers, $data);
+        $filepath = ExportService::toExcel('auditoria', $headers, $data);
 
-        AuditService::register('exportar_auditoria', 'auditoria', 'Exportación de auditoría');
+        AuditService::register('exportar_auditoria', 'auditoria', 'Exportación de auditoría', null, 'info');
 
-        \App\Core\Response::download($filepath);
+        Response::download($filepath);
     }
 }

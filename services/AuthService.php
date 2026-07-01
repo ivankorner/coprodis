@@ -20,6 +20,7 @@ class AuthService
         );
 
         if (!$user) {
+            \App\Services\AuditService::register('inicio_sesion_fallido', 'auth', "Intento de inicio de sesión fallido: {$email}", null, 'warning', ['email' => $email]);
             return ['success' => false, 'message' => 'Credenciales inválidas.'];
         }
 
@@ -79,7 +80,7 @@ class AuthService
         \App\Core\Session::set('last_activity', time());
         \App\Core\Session::set('must_change_password', (bool)$user->password_temporal);
 
-        \App\Services\AuditService::register('inicio_sesion', 'auth', "Inicio de sesión: {$user->email}", $user->id);
+        \App\Services\AuditService::register('inicio_sesion', 'auth', "Inicio de sesión: {$user->email}", $user->id, 'success', [], 'user', $user->id);
 
         return ['success' => true, 'must_change_password' => (bool)$user->password_temporal];
     }
@@ -87,7 +88,7 @@ class AuthService
     public static function logout(): void
     {
         $userId = \App\Core\Session::userId();
-        AuditService::register('cierre_sesion', 'auth', 'Cierre de sesión', $userId);
+        AuditService::register('cierre_sesion', 'auth', 'Cierre de sesión', $userId, 'info');
         \App\Core\Session::destroy();
     }
 
@@ -115,7 +116,7 @@ class AuthService
 
         $sent = \App\Services\MailService::sendPasswordReset($email, $user->nombre, $token);
 
-        AuditService::register('solicitud_recuperacion', 'auth', "Solicitud de recuperación: {$email}", $user->id);
+        AuditService::register('solicitud_recuperacion', 'auth', "Solicitud de recuperación: {$email}", $user->id, 'warning', [], 'user', $user->id);
 
         return ['success' => true, 'message' => 'Si el correo existe, recibirás un enlace de recuperación.'];
     }
@@ -145,7 +146,7 @@ class AuthService
 
         $user = $db->fetch("SELECT * FROM users WHERE id = :id", ['id' => $reset->user_id]);
 
-        AuditService::register('recuperacion_password', 'auth', "Contraseña restablecida: {$user->email}", $user->id);
+        AuditService::register('recuperacion_password', 'auth', "Contraseña restablecida: {$user->email}", $user->id, 'success', [], 'user', $user->id);
 
         return ['success' => true, 'message' => 'Contraseña restablecida exitosamente.'];
     }
@@ -169,7 +170,7 @@ class AuthService
 
         \App\Core\Session::set('must_change_password', false);
 
-        AuditService::register('cambio_password', 'auth', 'Cambio de contraseña', $userId);
+        AuditService::register('cambio_password', 'auth', 'Cambio de contraseña', $userId, 'warning', [], 'user', $userId);
 
         return ['success' => true, 'message' => 'Contraseña cambiada exitosamente.'];
     }

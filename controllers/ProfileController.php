@@ -36,6 +36,8 @@ class ProfileController extends Controller
         $db = Database::getInstance();
         $db->update('users', $data, 'id = :id', ['id' => $userId]);
 
+        AuditService::register('actualizar_perfil', 'perfil', 'Perfil actualizado', null, 'info', $data, 'user', $userId);
+
         $this->redirectWith(APP_URL . '/perfil', 'success', 'Perfil actualizado exitosamente.');
     }
 
@@ -71,7 +73,7 @@ class ProfileController extends Controller
             'password_changed_at' => date('Y-m-d H:i:s'),
         ], 'id = :id', ['id' => $userId]);
 
-        AuditService::register('cambio_password', 'perfil', 'Cambio de contraseña desde perfil');
+        AuditService::register('cambio_password', 'perfil', 'Cambio de contraseña desde perfil', null, 'warning', [], 'user', $userId);
 
         $this->redirectWith(APP_URL . '/perfil', 'success', 'Contraseña cambiada exitosamente.');
     }

@@ -91,7 +91,7 @@ class FormBuilderController extends Controller
             'created_by' => Session::userId(),
         ]);
 
-        AuditService::register('crear_formulario', 'formularios', "Formulario creado: {$data['titulo']}");
+        AuditService::register('crear_formulario', 'formularios', "Formulario creado: {$data['titulo']}", null, 'success', ['titulo' => $data['titulo']], 'form', $formId);
 
         $this->redirectWith(APP_URL . "/formularios/{$formId}/editar", 'success', 'Formulario creado. Ahora puedes agregar campos.');
     }
@@ -125,7 +125,7 @@ class FormBuilderController extends Controller
             'descripcion' => $data['descripcion'] ?? null,
         ], 'id = :id', ['id' => $id]);
 
-        AuditService::register('editar_formulario', 'formularios', "Formulario editado: {$data['titulo']}");
+        AuditService::register('editar_formulario', 'formularios', "Formulario editado: {$data['titulo']}", null, 'warning', [], 'form', $id);
 
         $this->redirectWith(APP_URL . '/formularios', 'success', 'Formulario actualizado exitosamente.');
     }
@@ -217,7 +217,7 @@ class FormBuilderController extends Controller
 
             $db->commit();
 
-            AuditService::register('duplicar_formulario', 'formularios', "Formulario duplicado: {$form->titulo}");
+            AuditService::register('duplicar_formulario', 'formularios', "Formulario duplicado: {$form->titulo}", null, 'info', [], 'form', $newFormId);
 
             $this->redirectWith(APP_URL . '/formularios', 'success', 'Formulario duplicado exitosamente.');
         } catch (\Exception $e) {
@@ -245,7 +245,7 @@ class FormBuilderController extends Controller
 
         $db->update('forms', ['estado' => $nuevoEstado], 'id = :id', ['id' => $id]);
 
-        AuditService::register('cambiar_estado_formulario', 'formularios', "Formulario {$nuevoEstado}: {$form->titulo}");
+        AuditService::register('cambiar_estado_formulario', 'formularios', "Formulario {$nuevoEstado}: {$form->titulo}", null, 'warning', ['estado' => $nuevoEstado], 'form', $id);
 
         $this->redirectWith(APP_URL . '/formularios', 'success', "Formulario {$nuevoEstado} exitosamente.");
     }
@@ -262,7 +262,7 @@ class FormBuilderController extends Controller
 
         $db->update('forms', ['deleted_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $id]);
 
-        AuditService::register('eliminar_formulario', 'formularios', "Formulario eliminado: {$form->titulo}");
+        AuditService::register('eliminar_formulario', 'formularios', "Formulario eliminado: {$form->titulo}", null, 'danger', [], 'form', $id);
 
         $this->redirectWith(APP_URL . '/formularios', 'success', 'Formulario eliminado exitosamente.');
     }
