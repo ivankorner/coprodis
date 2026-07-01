@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Deny access to sensitive directories
+RewriteRule ^(config|core|controllers|models|repositories|services|helpers|middleware|mail|storage|logs|vendor|migrations|seeders) - [F,L]
+
+<FilesMatch "\.(env|log|json|lock)$">
+    Require all denied
+</FilesMatch>

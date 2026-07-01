@@ -1,0 +1,14 @@
+{
+    "name": "coprodis",
+    "version": "1.0.0",
+    "description": "COPRODIS - Consejo Provincial de Discapacidad",
+    "dependencies": {
+        "alpinejs": "^3.14",
+        "chart.js": "^4.4",
+        "datatables.net": "^2.1",
+        "sweetalert2": "^11.14",
+        "flatpickr": "^4.6",
+        "signature_pad": "^5.0",
+        "@fortawesome/fontawesome-free": "^6.7"
+    }
+}
