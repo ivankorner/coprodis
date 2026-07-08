@@ -30,36 +30,17 @@
         </div>
     </div>
 
-    <?php
-    $personApellido = ''; $personNombre = ''; $personDNI = ''; $personEmail = '';
-    foreach ($fields as $f) {
-        $label = mb_strtolower(trim($f->etiqueta));
-        if ($label === 'apellido') $personApellido = $f->valor ?? '';
-        elseif ($label === 'nombre') $personNombre = $f->valor ?? '';
-        elseif ($label === 'dni') $personDNI = $f->valor ?? '';
-        elseif ($label === 'email') $personEmail = $f->valor ?? '';
-    }
-    ?>
-
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                <?php foreach ($fields as $f): ?>
+                <?php if (!in_array($f->tipo, ['imagen', 'archivo', 'firma'])): ?>
                 <div>
-                    <span class="text-gray-500">Apellido:</span>
-                    <span class="font-medium ml-1"><?= $personApellido ?: $record->apellido ?></span>
+                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
+                    <span class="font-medium ml-1"><?= $f->valor ?: '-' ?></span>
                 </div>
-                <div>
-                    <span class="text-gray-500">Nombre:</span>
-                    <span class="font-medium ml-1"><?= $personNombre ?: $record->nombre ?></span>
-                </div>
-                <div>
-                    <span class="text-gray-500">DNI:</span>
-                    <span class="font-medium ml-1"><?= $personDNI ?: '-' ?></span>
-                </div>
-                <div>
-                    <span class="text-gray-500">Email:</span>
-                    <span class="font-medium ml-1"><?= $personEmail ?: '-' ?></span>
-                </div>
+                <?php endif; ?>
+                <?php endforeach; ?>
                 <div>
                     <span class="text-gray-500">Estado:</span>
                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ml-1
