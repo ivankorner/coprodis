@@ -143,14 +143,14 @@
                             class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
                         <i class="fas fa-plus mr-1"></i> Agregar Campo
                     </button>
+
+                    <!-- Save Button -->
+                    <button @click="saveFields()"
+                            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold">
+                        <i class="fas fa-save mr-2"></i> Guardar Todos los Campos
+                    </button>
                 </div>
             </div>
-
-            <!-- Save Button -->
-            <button @click="saveFields()"
-                    class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold">
-                <i class="fas fa-save mr-2"></i> Guardar Todos los Campos
-            </button>
         </div>
     </div>
 </div>
