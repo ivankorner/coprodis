@@ -20,8 +20,9 @@
 
                 <!-- Field list -->
                 <div class="space-y-3">
-                    <template x-for="(field, index) in fields" :key="field.nombre">
-                        <div class="flex items-start border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors bg-white">
+                    <template x-for="(field, index) in fields" :key="index">
+                        <div class="flex items-start border rounded-lg p-4 transition-colors bg-white"
+                             :class="editingIndex === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'">
                             <!-- Move arrows -->
                             <div class="flex-shrink-0 flex flex-col mr-3 mt-1">
                                 <button @click="moveField(index, -1)" :disabled="index === 0"
@@ -35,16 +36,23 @@
                                     <i class="fas fa-chevron-down text-xs"></i>
                                 </button>
                             </div>
-                            <div class="flex-1 min-w-0">
+                            <div class="flex-1 min-w-0 cursor-pointer" @click="editField(index)">
                                 <div class="flex items-center space-x-2 mb-2">
                                     <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded"
                                           x-text="field.tipo.charAt(0).toUpperCase() + field.tipo.slice(1)"></span>
                                     <span class="text-xs text-gray-500" x-show="field.requerido">* Requerido</span>
+                                    <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded" x-show="editingIndex === index">Editando</span>
                                 </div>
                                 <p class="text-sm font-medium text-gray-900" x-text="field.etiqueta || 'Sin etiqueta'"></p>
                                 <p class="text-xs text-gray-500" x-show="field.placeholder" x-text="field.placeholder"></p>
+                                <p class="text-xs text-gray-400 mt-1" x-show="field.ayuda" x-text="'Ayuda: ' + field.ayuda"></p>
                             </div>
-                            <div class="flex-shrink-0 ml-2">
+                            <div class="flex-shrink-0 ml-2 flex flex-col space-y-1">
+                                <button @click.stop="editField(index)" class="p-1 text-gray-400 hover:text-blue-600"
+                                        title="Editar campo"
+                                        :class="editingIndex === index ? 'text-blue-600' : ''">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </button>
                                 <button @click="removeField(index)" class="p-1 text-gray-400 hover:text-red-600"
                                         title="Eliminar campo">
                                     <i class="fas fa-times"></i>
@@ -84,15 +92,21 @@
             </div>
         </div>
 
-        <!-- Add Field Panel -->
+        <!-- Add/Edit Field Panel -->
         <div class="space-y-4">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sticky top-24">
-                <h2 class="text-sm font-semibold text-gray-700 mb-4">Agregar Campo</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-semibold text-gray-700" x-text="editingIndex !== null ? 'Editar Campo' : 'Agregar Campo'"></h2>
+                    <span x-show="editingIndex !== null"
+                          class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">
+                        Editando campo <span x-text="editingIndex + 1"></span>
+                    </span>
+                </div>
 
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de campo</label>
-                        <select x-model="newField.tipo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <select x-model="fieldForm.tipo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                             <option value="texto">Texto</option>
                             <option value="numero">Número</option>
                             <option value="email">Correo Electrónico</option>
@@ -111,40 +125,65 @@
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Etiqueta *</label>
-                        <input type="text" x-model="newField.etiqueta" placeholder="Ej: Nombre completo"
+                        <input type="text" x-model="fieldForm.etiqueta" placeholder="Ej: Nombre completo"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del campo *</label>
-                        <input type="text" x-model="newField.nombre" placeholder="Ej: nombre_completo"
+                        <input type="text" x-model="fieldForm.nombre" placeholder="Ej: nombre_completo"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Placeholder</label>
-                        <input type="text" x-model="newField.placeholder"
+                        <input type="text" x-model="fieldForm.placeholder"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
-                    <div x-show="['select', 'checkbox', 'radio'].includes(newField.tipo)">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Texto de ayuda</label>
+                        <input type="text" x-model="fieldForm.ayuda" placeholder="Texto informativo para el usuario"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+
+                    <div x-show="['select', 'checkbox', 'radio'].includes(fieldForm.tipo)">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Opciones (una por línea)</label>
-                        <textarea x-model="newField.opciones_text" rows="4"
+                        <textarea x-model="fieldForm.opciones_text" rows="4"
                                   placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
                     </div>
 
                     <label class="flex items-center space-x-2">
-                        <input type="checkbox" x-model="newField.requerido" class="rounded border-gray-300 text-blue-600">
+                        <input type="checkbox" x-model="fieldForm.requerido" class="rounded border-gray-300 text-blue-600">
                         <span class="text-sm text-gray-700">Campo requerido</span>
                     </label>
 
-                    <button @click="addField()"
-                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                        <i class="fas fa-plus mr-1"></i> Agregar Campo
-                    </button>
+                    <!-- Add mode buttons -->
+                    <template x-if="editingIndex === null">
+                        <div class="space-y-2">
+                            <button @click="addField()"
+                                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                                <i class="fas fa-plus mr-1"></i> Agregar Campo
+                            </button>
+                        </div>
+                    </template>
 
-                    <!-- Save Button -->
+                    <!-- Edit mode buttons -->
+                    <template x-if="editingIndex !== null">
+                        <div class="space-y-2">
+                            <button @click="updateField()"
+                                    class="w-full px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-medium">
+                                <i class="fas fa-check mr-1"></i> Actualizar Campo
+                            </button>
+                            <button @click="cancelEdit()"
+                                    class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">
+                                <i class="fas fa-times mr-1"></i> Cancelar
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- Save Button (always visible) -->
                     <button @click="saveFields()"
                             class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold">
                         <i class="fas fa-save mr-2"></i> Guardar Todos los Campos
@@ -170,11 +209,14 @@ function formBuilder() {
             'opciones' => $f->opciones ? json_decode($f->opciones) : [],
         ], $fields ?? [])) ?>,
 
-        newField: {
+        editingIndex: null,
+
+        fieldForm: {
             tipo: 'texto',
             etiqueta: '',
             nombre: '',
             placeholder: '',
+            ayuda: '',
             opciones_text: '',
             requerido: false,
         },
@@ -185,32 +227,92 @@ function formBuilder() {
             const items = [...this.fields];
             [items[index], items[newIndex]] = [items[newIndex], items[index]];
             this.fields = items;
+            if (this.editingIndex === index) {
+                this.editingIndex = newIndex;
+            } else if (this.editingIndex === newIndex) {
+                this.editingIndex = index;
+            }
+        },
+
+        resetFieldForm() {
+            this.fieldForm = { tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', ayuda: '', opciones_text: '', requerido: false };
         },
 
         addField() {
-            if (!this.newField.etiqueta || !this.newField.nombre) {
+            if (!this.fieldForm.etiqueta || !this.fieldForm.nombre) {
                 Swal.fire('Error', 'La etiqueta y el nombre son obligatorios.', 'error');
                 return;
             }
 
             let opciones = [];
-            if (['select', 'checkbox', 'radio'].includes(this.newField.tipo) && this.newField.opciones_text) {
-                opciones = this.newField.opciones_text.split('\n').filter(o => o.trim());
+            if (['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
+                opciones = this.fieldForm.opciones_text.split('\n').filter(o => o.trim());
             }
 
             this.fields.push({
-                tipo: this.newField.tipo,
-                nombre: this.newField.nombre,
-                etiqueta: this.newField.etiqueta,
-                placeholder: this.newField.placeholder,
-                requerido: this.newField.requerido,
+                tipo: this.fieldForm.tipo,
+                nombre: this.fieldForm.nombre,
+                etiqueta: this.fieldForm.etiqueta,
+                placeholder: this.fieldForm.placeholder,
+                ayuda: this.fieldForm.ayuda,
+                requerido: this.fieldForm.requerido,
                 opciones: opciones,
             });
 
-            this.newField = { tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', opciones_text: '', requerido: false };
+            this.resetFieldForm();
+        },
+
+        editField(index) {
+            const field = this.fields[index];
+            this.editingIndex = index;
+            this.fieldForm = {
+                tipo: field.tipo,
+                etiqueta: field.etiqueta,
+                nombre: field.nombre,
+                placeholder: field.placeholder || '',
+                ayuda: field.ayuda || '',
+                opciones_text: Array.isArray(field.opciones) ? field.opciones.join('\n') : '',
+                requerido: field.requerido,
+            };
+        },
+
+        updateField() {
+            if (this.editingIndex === null) return;
+            if (!this.fieldForm.etiqueta || !this.fieldForm.nombre) {
+                Swal.fire('Error', 'La etiqueta y el nombre son obligatorios.', 'error');
+                return;
+            }
+
+            let opciones = [];
+            if (['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
+                opciones = this.fieldForm.opciones_text.split('\n').filter(o => o.trim());
+            }
+
+            this.fields[this.editingIndex] = {
+                ...this.fields[this.editingIndex],
+                tipo: this.fieldForm.tipo,
+                nombre: this.fieldForm.nombre,
+                etiqueta: this.fieldForm.etiqueta,
+                placeholder: this.fieldForm.placeholder,
+                ayuda: this.fieldForm.ayuda,
+                requerido: this.fieldForm.requerido,
+                opciones: opciones,
+            };
+
+            this.cancelEdit();
+        },
+
+        cancelEdit() {
+            this.editingIndex = null;
+            this.resetFieldForm();
         },
 
         removeField(index) {
+            if (this.editingIndex === index) {
+                this.cancelEdit();
+            } else if (this.editingIndex !== null && this.editingIndex > index) {
+                this.editingIndex--;
+            }
             this.fields.splice(index, 1);
         },
 
