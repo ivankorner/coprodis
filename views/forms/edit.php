@@ -18,25 +18,37 @@
                     <span class="text-xs text-gray-500" x-text="fields.length + ' campo(s)'"></span>
                 </div>
 
-                <!-- Draggable field list -->
+                <!-- Field list -->
                 <div class="space-y-3">
-                    <template x-for="(field, index) in fields" :key="index">
-                        <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center space-x-2 mb-2">
-                                        <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded"
-                                              x-text="field.tipo.charAt(0).toUpperCase() + field.tipo.slice(1)"></span>
-                                        <span class="text-xs text-gray-500" x-show="field.requerido">* Requerido</span>
-                                    </div>
-                                    <p class="text-sm font-medium text-gray-900" x-text="field.etiqueta || 'Sin etiqueta'"></p>
-                                    <p class="text-xs text-gray-500" x-show="field.placeholder" x-text="field.placeholder"></p>
+                    <template x-for="(field, index) in fields" :key="field.nombre">
+                        <div class="flex items-start border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors bg-white">
+                            <!-- Move arrows -->
+                            <div class="flex-shrink-0 flex flex-col mr-3 mt-1">
+                                <button @click="moveField(index, -1)" :disabled="index === 0"
+                                        class="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-25 disabled:cursor-not-allowed"
+                                        title="Mover arriba">
+                                    <i class="fas fa-chevron-up text-xs"></i>
+                                </button>
+                                <button @click="moveField(index, 1)" :disabled="index === fields.length - 1"
+                                        class="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-25 disabled:cursor-not-allowed"
+                                        title="Mover abajo">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded"
+                                          x-text="field.tipo.charAt(0).toUpperCase() + field.tipo.slice(1)"></span>
+                                    <span class="text-xs text-gray-500" x-show="field.requerido">* Requerido</span>
                                 </div>
-                                <div class="flex space-x-1">
-                                    <button @click="removeField(index)" class="p-1 text-gray-400 hover:text-red-600">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
+                                <p class="text-sm font-medium text-gray-900" x-text="field.etiqueta || 'Sin etiqueta'"></p>
+                                <p class="text-xs text-gray-500" x-show="field.placeholder" x-text="field.placeholder"></p>
+                            </div>
+                            <div class="flex-shrink-0 ml-2">
+                                <button @click="removeField(index)" class="p-1 text-gray-400 hover:text-red-600"
+                                        title="Eliminar campo">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
                         </div>
                     </template>
@@ -165,6 +177,14 @@ function formBuilder() {
             placeholder: '',
             opciones_text: '',
             requerido: false,
+        },
+
+        moveField(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= this.fields.length) return;
+            const items = [...this.fields];
+            [items[index], items[newIndex]] = [items[newIndex], items[index]];
+            this.fields = items;
         },
 
         addField() {
