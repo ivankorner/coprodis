@@ -148,13 +148,17 @@ class FormBuilderController extends Controller
             $db->update('form_fields', ['deleted_at' => date('Y-m-d H:i:s')], 'form_id = :form_id', ['form_id' => $formId]);
 
             $orden = 0;
+            $nombreToId = [];
+
             foreach ($fields as $field) {
                 $placeholder = $field['placeholder'] ?? null;
                 $ayuda = $field['ayuda'] ?? null;
                 $opciones = !empty($field['opciones']) ? json_encode($field['opciones']) : null;
                 $valorDefecto = $field['valor_defecto'] ?? null;
+                $condicionPadreRaw = $field['condicion_campo_padre'] ?? null;
+                $condicionValor = $field['condicion_valor'] ?? null;
 
-                $db->insert('form_fields', [
+                $newId = $db->insert('form_fields', [
                     'form_id' => $formId,
                     'tipo' => $field['tipo'],
                     'nombre' => $field['nombre'],
@@ -165,7 +169,31 @@ class FormBuilderController extends Controller
                     'opciones' => $opciones,
                     'valor_defecto' => $valorDefecto ?: null,
                     'orden' => $orden++,
+                    'condicion_campo_padre' => null,
+                    'condicion_valor' => $condicionValor ?: null,
                 ]);
+
+                $nombreToId[$field['nombre']] = $newId;
+            }
+
+            foreach ($fields as $field) {
+                $condicionPadreRaw = $field['condicion_campo_padre'] ?? null;
+                if (!$condicionPadreRaw || !$field['condicion_valor']) continue;
+
+                $childId = $nombreToId[$field['nombre']] ?? null;
+                $parentId = $nombreToId[$condicionPadreRaw] ?? null;
+
+                if (!$parentId && is_numeric($condicionPadreRaw)) {
+                    $parentId = (int)$condicionPadreRaw;
+                }
+
+                if ($childId && $parentId) {
+                    $db->update('form_fields',
+                        ['condicion_campo_padre' => $parentId],
+                        'id = :id',
+                        ['id' => $childId]
+                    );
+                }
             }
 
             $db->commit();
@@ -200,8 +228,9 @@ class FormBuilderController extends Controller
                 'created_by' => Session::userId(),
             ]);
 
+            $idMap = [];
             foreach ($fields as $field) {
-                $db->insert('form_fields', [
+                $newFieldId = $db->insert('form_fields', [
                     'form_id' => $newFormId,
                     'tipo' => $field->tipo,
                     'nombre' => $field->nombre,
@@ -213,6 +242,16 @@ class FormBuilderController extends Controller
                     'valor_defecto' => $field->valor_defecto,
                     'orden' => $field->orden,
                 ]);
+                $idMap[$field->id] = $newFieldId;
+            }
+
+            foreach ($fields as $field) {
+                if ($field->condicion_campo_padre && isset($idMap[$field->condicion_campo_padre])) {
+                    $db->update('form_fields', [
+                        'condicion_campo_padre' => $idMap[$field->condicion_campo_padre],
+                        'condicion_valor' => $field->condicion_valor,
+                    ], 'id = :id', ['id' => $idMap[$field->id]]);
+                }
             }
 
             $db->commit();

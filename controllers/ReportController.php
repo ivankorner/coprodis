@@ -113,6 +113,8 @@ class ReportController extends Controller
 
             switch ($field->tipo) {
                 case 'numero':
+                case 'moneda':
+                case 'porcentaje':
                     $agg = $db->fetch(
                         "SELECT AVG(CAST(rd.valor AS DECIMAL(14,2))) as avg,
                                 SUM(CAST(rd.valor AS DECIMAL(14,2))) as sum,

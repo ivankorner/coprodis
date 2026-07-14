@@ -94,7 +94,7 @@
 
         <!-- Add/Edit Field Panel -->
         <div class="space-y-4">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sticky top-24">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto overflow-x-hidden">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-sm font-semibold text-gray-700" x-text="editingIndex !== null ? 'Editar Campo' : 'Agregar Campo'"></h2>
                     <span x-show="editingIndex !== null"
@@ -109,6 +109,10 @@
                         <select x-model="fieldForm.tipo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                             <option value="texto">Texto</option>
                             <option value="numero">Número</option>
+                            <option value="telefono">Teléfono</option>
+                            <option value="moneda">Moneda ($)</option>
+                            <option value="porcentaje">Porcentaje</option>
+                            <option value="url">URL / Enlace</option>
                             <option value="email">Correo Electrónico</option>
                             <option value="fecha">Fecha</option>
                             <option value="hora">Hora</option>
@@ -159,6 +163,98 @@
                         <span class="text-sm text-gray-700">Campo requerido</span>
                     </label>
 
+                    <!-- Sub-preguntas condicionales (solo para select/radio) -->
+                    <div x-show="['select', 'radio'].includes(fieldForm.tipo)" class="border-t pt-4 mt-2">
+                        <label class="block text-xs font-medium text-gray-600 mb-2">
+                            <i class="fas fa-code-branch mr-1"></i> Sub-preguntas condicionales
+                        </label>
+                        <p class="text-xs text-gray-400 mb-3">Vinculá un campo existente o creá uno nuevo para cada opción</p>
+                        
+                        <div class="space-y-2">
+                            <template x-for="(opt, optIdx) in fieldForm.opciones_array" :key="optIdx">
+                                <div>
+                                        <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+                                        <span class="text-xs text-gray-500 flex-shrink-0"
+                                              x-text="'Si: ' + opt"></span>
+                                        <div class="flex-1"></div>
+                                        <span x-show="fieldForm.sub_preguntas[opt]"
+                                              class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded flex-shrink-0">
+                                            <i class="fas fa-check mr-1"></i> Vinculado
+                                        </span>
+                                        <button type="button" @click="openSubPreguntaForm(opt)"
+                                                class="flex-shrink-0 px-2 py-1.5 text-xs text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
+                                                :title="fieldForm.sub_preguntas[opt] ? 'Editar campo vinculado' : 'Crear campo nuevo para esta opción'">
+                                            <i class="fas" :class="fieldForm.sub_preguntas[opt] ? 'fa-pen' : 'fa-plus'"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Mini-formulario inline para crear campo condicional -->
+                                    <div x-show="subPreguntaVisible === opt" x-transition class="ml-6 mt-2 p-3 bg-white border border-green-200 rounded-lg space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-medium text-green-700">
+                                                <i class="fas fa-plus-circle mr-1"></i> Nuevo campo para: <span x-text="opt"></span>
+                                            </span>
+                                            <button type="button" @click="subPreguntaVisible = null" class="text-gray-400 hover:text-gray-600">
+                                                <i class="fas fa-times text-xs"></i>
+                                            </button>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de campo *</label>
+                                            <select x-model="subPreguntaForm.tipo"
+                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+                                                <option value="texto">Texto</option>
+                                                <option value="numero">Número</option>
+                                                <option value="textarea">Área de Texto</option>
+                                                <option value="email">Correo Electrónico</option>
+                                                <option value="telefono">Teléfono</option>
+                                                <option value="fecha">Fecha</option>
+                                                <option value="hora">Hora</option>
+                                                <option value="checkbox">Checkbox</option>
+                                                <option value="radio">Radio Button</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Etiqueta *</label>
+                                            <input type="text" x-model="subPreguntaForm.etiqueta"
+                                                   placeholder="Ej: Especificar motivo"
+                                                   class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del campo *</label>
+                                            <input type="text" x-model="subPreguntaForm.nombre"
+                                                   placeholder="Se genera automáticamente si lo dejás vacío"
+                                                   class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+                                        </div>
+
+                                        <div x-show="['texto', 'numero', 'textarea', 'email', 'telefono'].includes(subPreguntaForm.tipo)">
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Placeholder</label>
+                                            <input type="text" x-model="subPreguntaForm.placeholder"
+                                                   class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs">
+                                        </div>
+
+                                        <div x-show="['checkbox', 'radio'].includes(subPreguntaForm.tipo)">
+                                            <label class="block text-xs font-medium text-gray-600 mb-1">Opciones (una por línea)</label>
+                                            <textarea x-model="subPreguntaForm.opciones_text" rows="3"
+                                                      placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
+                                                      class="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs"></textarea>
+                                        </div>
+
+                                        <button type="button" @click="addConditionalField(opt)"
+                                                class="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium">
+                                            <i class="fas fa-plus mr-1"></i> Agregar Campo
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                            <p x-show="fieldForm.opciones_array.length === 0" class="text-xs text-amber-500">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Agregá opciones al campo primero
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Add mode buttons -->
                     <template x-if="editingIndex === null">
                         <div class="space-y-2">
@@ -198,18 +294,41 @@
 <script>
 function formBuilder() {
     return {
-        fields: <?= json_encode(array_map(fn($f) => [
-            'id' => $f->id,
-            'tipo' => $f->tipo,
-            'nombre' => $f->nombre,
-            'etiqueta' => $f->etiqueta,
-            'placeholder' => $f->placeholder,
-            'ayuda' => $f->ayuda,
-            'requerido' => (bool)$f->requerido,
-            'opciones' => $f->opciones ? json_decode($f->opciones) : [],
-        ], $fields ?? [])) ?>,
+        fields: <?= json_encode(array_map(function($f) use ($fields) {
+            $padreNombre = '';
+            if ($f->condicion_campo_padre) {
+                foreach ($fields as $pf) {
+                    if ($pf->id == $f->condicion_campo_padre) {
+                        $padreNombre = $pf->nombre;
+                        break;
+                    }
+                }
+            }
+            return [
+                'id' => $f->id,
+                'tipo' => $f->tipo,
+                'nombre' => $f->nombre,
+                'etiqueta' => $f->etiqueta,
+                'placeholder' => $f->placeholder,
+                'ayuda' => $f->ayuda,
+                'requerido' => (bool)$f->requerido,
+                'opciones' => $f->opciones ? json_decode($f->opciones) : [],
+                'condicion_campo_padre_id' => $padreNombre ?: '',
+                'condicion_valor' => $f->condicion_valor ?? '',
+            ];
+        }, $fields ?? [])) ?>,
 
         editingIndex: null,
+
+        subPreguntaVisible: null,
+        subPreguntaTargetOpt: '',
+        subPreguntaForm: {
+            tipo: 'texto',
+            etiqueta: '',
+            nombre: '',
+            placeholder: '',
+            opciones_text: '',
+        },
 
         fieldForm: {
             tipo: 'texto',
@@ -219,6 +338,22 @@ function formBuilder() {
             ayuda: '',
             opciones_text: '',
             requerido: false,
+            opciones_array: [],
+            sub_preguntas: {},
+        },
+
+        init() {
+            this.$watch('fieldForm.opciones_text', (val) => {
+                const newOpts = val ? val.split('\n').filter(o => o.trim()) : [];
+                const oldOpts = this.fieldForm.opciones_array;
+                const newSub = {};
+                newOpts.forEach(opt => {
+                    newSub[opt] = (oldOpts.includes(opt) && this.fieldForm.sub_preguntas[opt])
+                        ? this.fieldForm.sub_preguntas[opt] : '';
+                });
+                this.fieldForm.opciones_array = newOpts;
+                this.fieldForm.sub_preguntas = newSub;
+            });
         },
 
         moveField(index, direction) {
@@ -235,7 +370,10 @@ function formBuilder() {
         },
 
         resetFieldForm() {
-            this.fieldForm = { tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', ayuda: '', opciones_text: '', requerido: false };
+            this.fieldForm = {
+                tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', ayuda: '',
+                opciones_text: '', requerido: false, opciones_array: [], sub_preguntas: {},
+            };
         },
 
         addField() {
@@ -265,14 +403,30 @@ function formBuilder() {
         editField(index) {
             const field = this.fields[index];
             this.editingIndex = index;
+
+            const opcionesArray = Array.isArray(field.opciones) ? field.opciones : [];
+            const subPreguntas = {};
+
+            if (['select', 'radio'].includes(field.tipo) && (field.id || field.nombre)) {
+                opcionesArray.forEach(opt => { subPreguntas[opt] = ''; });
+                const parentId = field.id || field.nombre;
+                this.fields.forEach(f => {
+                    if (f.condicion_campo_padre_id == parentId && f.condicion_valor) {
+                        subPreguntas[f.condicion_valor] = f.id || f.nombre;
+                    }
+                });
+            }
+
             this.fieldForm = {
                 tipo: field.tipo,
                 etiqueta: field.etiqueta,
                 nombre: field.nombre,
                 placeholder: field.placeholder || '',
                 ayuda: field.ayuda || '',
-                opciones_text: Array.isArray(field.opciones) ? field.opciones.join('\n') : '',
+                opciones_text: opcionesArray.join('\n'),
                 requerido: field.requerido,
+                opciones_array: opcionesArray,
+                sub_preguntas: subPreguntas,
             };
         },
 
@@ -307,6 +461,62 @@ function formBuilder() {
             this.resetFieldForm();
         },
 
+        openSubPreguntaForm(opt) {
+            this.subPreguntaTargetOpt = opt;
+            this.subPreguntaVisible = (this.subPreguntaVisible === opt) ? null : opt;
+            this.subPreguntaForm = {
+                tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', opciones_text: '',
+            };
+        },
+
+        addConditionalField(opt) {
+            const form = this.subPreguntaForm;
+            if (!form.etiqueta) {
+                Swal.fire('Error', 'La etiqueta es obligatoria.', 'error');
+                return;
+            }
+            if (['checkbox', 'radio'].includes(form.tipo) && !form.opciones_text.trim()) {
+                Swal.fire('Error', 'Agregá al menos una opción para checkbox/radio.', 'error');
+                return;
+            }
+
+            let nombre = form.nombre.trim();
+            if (!nombre) {
+                nombre = 'campo_' + opt.toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+                    + '_' + Date.now().toString(36);
+            }
+
+            let opciones = [];
+            if (['checkbox', 'radio'].includes(form.tipo) && form.opciones_text) {
+                opciones = form.opciones_text.split('\n').filter(o => o.trim());
+            }
+
+            const parentField = this.editingIndex !== null
+                ? this.fields[this.editingIndex]
+                : this.fieldForm;
+
+            const newField = {
+                tipo: form.tipo,
+                nombre: nombre,
+                etiqueta: form.etiqueta,
+                placeholder: form.placeholder,
+                ayuda: '',
+                requerido: false,
+                opciones: opciones,
+                condicion_campo_padre_id: parentField.id || parentField.nombre,
+                condicion_valor: opt,
+            };
+
+            this.fields.push(newField);
+            this.fieldForm.sub_preguntas[opt] = nombre;
+            this.subPreguntaVisible = null;
+            this.subPreguntaForm = {
+                tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', opciones_text: '',
+            };
+        },
+
         removeField(index) {
             if (this.editingIndex === index) {
                 this.cancelEdit();
@@ -317,12 +527,42 @@ function formBuilder() {
         },
 
         saveFields() {
+            const toSave = this.fields.map(f => ({
+                ...f,
+                condicion_campo_padre: f.condicion_campo_padre_id || null,
+                condicion_valor: f.condicion_valor || null,
+            }));
+
+            const allSubs = {};
+
+            if (this.editingIndex !== null) {
+                Object.assign(allSubs, this.fieldForm.sub_preguntas);
+            }
+
+            this.fields.forEach(f => {
+                if (!['select', 'radio'].includes(f.tipo)) return;
+                const fId = f.id || f.nombre;
+                if (!fId) return;
+                const idx = toSave.findIndex(tf => (tf.id && tf.id === f.id) || (!f.id && tf.nombre === f.nombre));
+                if (idx === -1) return;
+                const opciones = Array.isArray(toSave[idx].opciones) ? toSave[idx].opciones : [];
+                opciones.forEach(opt => {
+                    if (allSubs[opt]) {
+                        const childIdx = toSave.findIndex(c => c.id == allSubs[opt] || c.nombre === allSubs[opt]);
+                        if (childIdx !== -1) {
+                            toSave[childIdx].condicion_campo_padre = fId;
+                            toSave[childIdx].condicion_valor = opt;
+                        }
+                    }
+                });
+            });
+
             fetch('<?= APP_URL ?>/formularios/guardar-campos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     form_id: <?= $form->id ?>,
-                    fields: this.fields.map(f => ({
+                    fields: toSave.map(f => ({
                         tipo: f.tipo,
                         nombre: f.nombre,
                         etiqueta: f.etiqueta,
@@ -331,6 +571,8 @@ function formBuilder() {
                         requerido: f.requerido ? 1 : 0,
                         opciones: f.opciones || null,
                         valor_defecto: null,
+                        condicion_campo_padre: f.condicion_campo_padre || null,
+                        condicion_valor: f.condicion_valor || null,
                     })),
                     _csrf_token: '<?= $csrf_token ?>',
                 })
@@ -344,6 +586,16 @@ function formBuilder() {
                 }
             })
             .catch(() => Swal.fire('Error', 'Error de conexión.', 'error'));
+        },
+
+        get childFieldCandidates() {
+            const currentId = this.editingIndex !== null ? this.fields[this.editingIndex]?.id : null;
+            const currentNombre = this.editingIndex !== null ? this.fields[this.editingIndex]?.nombre : null;
+            return this.fields.filter(f => {
+                if (currentId && f.id === currentId) return false;
+                if (currentNombre && f.nombre === currentNombre) return false;
+                return true;
+            });
         }
     };
 }

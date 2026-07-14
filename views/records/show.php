@@ -34,7 +34,23 @@
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                 <?php foreach ($fields as $f): ?>
-                <?php if (!in_array($f->tipo, ['imagen', 'archivo', 'firma'])): ?>
+                <?php if (in_array($f->tipo, ['imagen', 'archivo', 'firma'])): ?>
+                <?php elseif ($f->tipo === 'url' && $f->valor): ?>
+                <div>
+                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
+                    <a href="<?= htmlspecialchars($f->valor) ?>" target="_blank" class="font-medium ml-1 text-blue-600 hover:underline"><?= htmlspecialchars($f->valor) ?></a>
+                </div>
+                <?php elseif ($f->tipo === 'moneda' && $f->valor !== null && $f->valor !== ''): ?>
+                <div>
+                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
+                    <span class="font-medium ml-1">$ <?= number_format((float)$f->valor, 2, ',', '.') ?></span>
+                </div>
+                <?php elseif ($f->tipo === 'porcentaje' && $f->valor !== null && $f->valor !== ''): ?>
+                <div>
+                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
+                    <span class="font-medium ml-1"><?= number_format((float)$f->valor, 2, ',', '.') ?>%</span>
+                </div>
+                <?php else: ?>
                 <div>
                     <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
                     <span class="font-medium ml-1"><?= $f->valor ?: '-' ?></span>
@@ -70,6 +86,15 @@
                        class="mt-1 inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100">
                         <i class="fas fa-download mr-1"></i> <?= basename($field->valor) ?>
                     </a>
+                <?php elseif ($field->tipo === 'url' && $field->valor): ?>
+                    <a href="<?= htmlspecialchars($field->valor) ?>" target="_blank"
+                       class="mt-1 inline-flex items-center text-blue-600 hover:underline text-sm">
+                        <i class="fas fa-external-link-alt mr-1"></i> <?= htmlspecialchars($field->valor) ?>
+                    </a>
+                <?php elseif ($field->tipo === 'moneda' && $field->valor !== null && $field->valor !== ''): ?>
+                    <p class="mt-1 text-sm font-medium text-gray-900">$ <?= number_format((float)$field->valor, 2, ',', '.') ?></p>
+                <?php elseif ($field->tipo === 'porcentaje' && $field->valor !== null && $field->valor !== ''): ?>
+                    <p class="mt-1 text-sm font-medium text-gray-900"><?= number_format((float)$field->valor, 2, ',', '.') ?>%</p>
                 <?php else: ?>
                     <p class="mt-1 text-sm text-gray-900"><?= nl2br($field->valor ?? '-') ?></p>
                 <?php endif; ?>
