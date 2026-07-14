@@ -149,23 +149,39 @@ class FormBuilderController extends Controller
 
             $orden = 0;
             $nombreToId = [];
+            $seccionCounter = 0;
 
             foreach ($fields as $field) {
-                $placeholder = $field['placeholder'] ?? null;
-                $ayuda = $field['ayuda'] ?? null;
-                $opciones = !empty($field['opciones']) ? json_encode($field['opciones']) : null;
-                $valorDefecto = $field['valor_defecto'] ?? null;
+                $esSeparador = ($field['tipo'] ?? '') === 'separador';
+
+                if ($esSeparador) {
+                    $seccionCounter++;
+                    $nombre = 'seccion_' . $seccionCounter;
+                    $placeholder = null;
+                    $ayuda = null;
+                    $opciones = null;
+                    $valorDefecto = null;
+                    $requerido = 0;
+                } else {
+                    $nombre = $field['nombre'];
+                    $placeholder = $field['placeholder'] ?? null;
+                    $ayuda = $field['ayuda'] ?? null;
+                    $opciones = !empty($field['opciones']) ? json_encode($field['opciones']) : null;
+                    $valorDefecto = $field['valor_defecto'] ?? null;
+                    $requerido = !empty($field['requerido']) ? 1 : 0;
+                }
+
                 $condicionPadreRaw = $field['condicion_campo_padre'] ?? null;
                 $condicionValor = $field['condicion_valor'] ?? null;
 
                 $newId = $db->insert('form_fields', [
                     'form_id' => $formId,
                     'tipo' => $field['tipo'],
-                    'nombre' => $field['nombre'],
+                    'nombre' => $nombre,
                     'etiqueta' => $field['etiqueta'],
                     'placeholder' => $placeholder ?: null,
                     'ayuda' => $ayuda ?: null,
-                    'requerido' => !empty($field['requerido']) ? 1 : 0,
+                    'requerido' => $requerido,
                     'opciones' => $opciones,
                     'valor_defecto' => $valorDefecto ?: null,
                     'orden' => $orden++,

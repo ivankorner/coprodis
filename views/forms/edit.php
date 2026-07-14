@@ -22,7 +22,9 @@
                 <div class="space-y-3">
                     <template x-for="(field, index) in fields" :key="index">
                         <div class="flex items-start border rounded-lg p-4 transition-colors bg-white"
-                             :class="editingIndex === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'">
+                             :class="field.tipo === 'separador' 
+                                ? 'border-blue-200 bg-blue-50' 
+                                : (editingIndex === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300')">
                             <!-- Move arrows -->
                             <div class="flex-shrink-0 flex flex-col mr-3 mt-1">
                                 <button @click="moveField(index, -1)" :disabled="index === 0"
@@ -38,14 +40,15 @@
                             </div>
                             <div class="flex-1 min-w-0 cursor-pointer" @click="editField(index)">
                                 <div class="flex items-center space-x-2 mb-2">
-                                    <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded"
+                                    <span class="text-xs font-medium px-2 py-0.5 rounded"
+                                          :class="field.tipo === 'separador' ? 'text-indigo-600 bg-indigo-50' : 'text-blue-600 bg-blue-50'"
                                           x-text="field.tipo.charAt(0).toUpperCase() + field.tipo.slice(1)"></span>
-                                    <span class="text-xs text-gray-500" x-show="field.requerido">* Requerido</span>
+                                    <span class="text-xs text-gray-500" x-show="field.requerido && field.tipo !== 'separador'">* Requerido</span>
                                     <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded" x-show="editingIndex === index">Editando</span>
                                 </div>
                                 <p class="text-sm font-medium text-gray-900" x-text="field.etiqueta || 'Sin etiqueta'"></p>
-                                <p class="text-xs text-gray-500" x-show="field.placeholder" x-text="field.placeholder"></p>
-                                <p class="text-xs text-gray-400 mt-1" x-show="field.ayuda" x-text="'Ayuda: ' + field.ayuda"></p>
+                                <p class="text-xs text-gray-500" x-show="field.placeholder && field.tipo !== 'separador'" x-text="field.placeholder"></p>
+                                <p class="text-xs text-gray-400 mt-1" x-show="field.ayuda && field.tipo !== 'separador'" x-text="'Ayuda: ' + field.ayuda"></p>
                             </div>
                             <div class="flex-shrink-0 ml-2 flex flex-col space-y-1">
                                 <button @click.stop="editField(index)" class="p-1 text-gray-400 hover:text-blue-600"
@@ -82,6 +85,13 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                             <textarea name="descripcion" rows="2"
                                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"><?= $form->descripcion ?></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Título de Sección Inicial</label>
+                            <input type="text" name="seccion_inicial_titulo" value="<?= $form->seccion_inicial_titulo ?? 'General' ?>"
+                                   placeholder="Ej: General, Datos Personales, Información General"
+                                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            <p class="mt-1 text-xs text-gray-500">Título de la primera sección (antes del primer separador)</p>
                         </div>
                         <button type="submit"
                                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
@@ -124,6 +134,7 @@
                             <option value="archivo">Archivo</option>
                             <option value="firma">Firma Digital</option>
                             <option value="gps">Coordenadas GPS</option>
+                            <option value="separador">Separador de Sección</option>
                         </select>
                     </div>
 
@@ -133,32 +144,32 @@
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
-                    <div>
+                    <div x-show="fieldForm.tipo !== 'separador'">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del campo *</label>
                         <input type="text" x-model="fieldForm.nombre" placeholder="Ej: nombre_completo"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
-                    <div>
+                    <div x-show="fieldForm.tipo !== 'separador'">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Placeholder</label>
                         <input type="text" x-model="fieldForm.placeholder"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
-                    <div>
+                    <div x-show="fieldForm.tipo !== 'separador'">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Texto de ayuda</label>
                         <input type="text" x-model="fieldForm.ayuda" placeholder="Texto informativo para el usuario"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                     </div>
 
-                    <div x-show="['select', 'checkbox', 'radio'].includes(fieldForm.tipo)">
+                    <div x-show="fieldForm.tipo !== 'separador' && ['select', 'checkbox', 'radio'].includes(fieldForm.tipo)">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Opciones (una por línea)</label>
                         <textarea x-model="fieldForm.opciones_text" rows="4"
                                   placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
                     </div>
 
-                    <label class="flex items-center space-x-2">
+                    <label x-show="fieldForm.tipo !== 'separador'" class="flex items-center space-x-2">
                         <input type="checkbox" x-model="fieldForm.requerido" class="rounded border-gray-300 text-blue-600">
                         <span class="text-sm text-gray-700">Campo requerido</span>
                     </label>
@@ -377,23 +388,36 @@ function formBuilder() {
         },
 
         addField() {
-            if (!this.fieldForm.etiqueta || !this.fieldForm.nombre) {
+            const esSeparador = this.fieldForm.tipo === 'separador';
+            
+            if (!esSeparador && (!this.fieldForm.etiqueta || !this.fieldForm.nombre)) {
                 Swal.fire('Error', 'La etiqueta y el nombre son obligatorios.', 'error');
                 return;
             }
+            if (esSeparador && !this.fieldForm.etiqueta) {
+                Swal.fire('Error', 'La etiqueta es obligatoria para el separador.', 'error');
+                return;
+            }
+
+            // Auto-generar nombre para separadores
+            let nombre = this.fieldForm.nombre;
+            if (esSeparador) {
+                const count = this.fields.filter(f => f.tipo === 'separador').length + 1;
+                nombre = 'seccion_' + count;
+            }
 
             let opciones = [];
-            if (['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
+            if (!esSeparador && ['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
                 opciones = this.fieldForm.opciones_text.split('\n').filter(o => o.trim());
             }
 
             this.fields.push({
                 tipo: this.fieldForm.tipo,
-                nombre: this.fieldForm.nombre,
+                nombre: nombre,
                 etiqueta: this.fieldForm.etiqueta,
-                placeholder: this.fieldForm.placeholder,
-                ayuda: this.fieldForm.ayuda,
-                requerido: this.fieldForm.requerido,
+                placeholder: esSeparador ? '' : this.fieldForm.placeholder,
+                ayuda: esSeparador ? '' : this.fieldForm.ayuda,
+                requerido: esSeparador ? false : this.fieldForm.requerido,
                 opciones: opciones,
             });
 
@@ -417,14 +441,16 @@ function formBuilder() {
                 });
             }
 
+            const esSeparador = field.tipo === 'separador';
+
             this.fieldForm = {
                 tipo: field.tipo,
                 etiqueta: field.etiqueta,
-                nombre: field.nombre,
-                placeholder: field.placeholder || '',
-                ayuda: field.ayuda || '',
+                nombre: esSeparador ? '' : field.nombre,
+                placeholder: esSeparador ? '' : (field.placeholder || ''),
+                ayuda: esSeparador ? '' : (field.ayuda || ''),
                 opciones_text: opcionesArray.join('\n'),
-                requerido: field.requerido,
+                requerido: esSeparador ? false : field.requerido,
                 opciones_array: opcionesArray,
                 sub_preguntas: subPreguntas,
             };
@@ -432,24 +458,36 @@ function formBuilder() {
 
         updateField() {
             if (this.editingIndex === null) return;
-            if (!this.fieldForm.etiqueta || !this.fieldForm.nombre) {
+            const esSeparador = this.fieldForm.tipo === 'separador';
+            
+            if (!esSeparador && (!this.fieldForm.etiqueta || !this.fieldForm.nombre)) {
                 Swal.fire('Error', 'La etiqueta y el nombre son obligatorios.', 'error');
+                return;
+            }
+            if (esSeparador && !this.fieldForm.etiqueta) {
+                Swal.fire('Error', 'La etiqueta es obligatoria para el separador.', 'error');
                 return;
             }
 
             let opciones = [];
-            if (['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
+            if (!esSeparador && ['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
                 opciones = this.fieldForm.opciones_text.split('\n').filter(o => o.trim());
+            }
+
+            // Mantener nombre existente si es separador
+            let nombre = this.fieldForm.nombre;
+            if (esSeparador) {
+                nombre = this.fields[this.editingIndex].nombre || 'seccion_1';
             }
 
             this.fields[this.editingIndex] = {
                 ...this.fields[this.editingIndex],
                 tipo: this.fieldForm.tipo,
-                nombre: this.fieldForm.nombre,
+                nombre: nombre,
                 etiqueta: this.fieldForm.etiqueta,
-                placeholder: this.fieldForm.placeholder,
-                ayuda: this.fieldForm.ayuda,
-                requerido: this.fieldForm.requerido,
+                placeholder: esSeparador ? '' : this.fieldForm.placeholder,
+                ayuda: esSeparador ? '' : this.fieldForm.ayuda,
+                requerido: esSeparador ? false : this.fieldForm.requerido,
                 opciones: opciones,
             };
 

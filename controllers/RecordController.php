@@ -118,7 +118,7 @@ class RecordController extends Controller
         $db = Database::getInstance();
 
         $form = $db->fetch(
-            "SELECT * FROM forms WHERE id = :id AND deleted_at IS NULL AND estado = 'publicado'",
+            "SELECT *, seccion_inicial_titulo FROM forms WHERE id = :id AND deleted_at IS NULL AND estado = 'publicado'",
             ['id' => $formId]
         );
 
@@ -142,7 +142,7 @@ class RecordController extends Controller
         $userId = Session::userId();
 
         $form = $db->fetch(
-            "SELECT * FROM forms WHERE id = :id AND deleted_at IS NULL AND estado = 'publicado'",
+            "SELECT *, seccion_inicial_titulo FROM forms WHERE id = :id AND deleted_at IS NULL AND estado = 'publicado'",
             ['id' => $formId]
         );
 
@@ -308,7 +308,7 @@ class RecordController extends Controller
         $db = Database::getInstance();
 
         $record = $db->fetch(
-            "SELECT r.*, f.titulo as form_titulo
+            "SELECT r.*, f.titulo as form_titulo, f.seccion_inicial_titulo
              FROM records r
              JOIN forms f ON r.form_id = f.id
              WHERE r.id = :id AND r.deleted_at IS NULL",

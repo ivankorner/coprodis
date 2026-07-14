@@ -13,21 +13,41 @@
         <form action="<?= APP_URL ?>/registros/<?= $record->id ?>/editar" method="POST" enctype="multipart/form-data"
               x-data="formConditional()">
             <input type="hidden" name="_csrf_token" value="<?= $csrf_token ?>">
-            <div class="space-y-5">
-                <?php foreach ($fields as $field): ?>
-                <?php
-                    $condicionPadre = $field->condicion_campo_padre ?? null;
-                    $condicionValor = $field->condicion_valor ?? null;
-                    $valorActual = $field->valor ?? '';
-                ?>
-                <div <?php if ($condicionPadre): ?>
-                    x-show="fields['field_<?= $condicionPadre ?>'] === '<?= addslashes($condicionValor) ?>'"
-                    x-transition
-                <?php endif; ?>>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        <?= $field->etiqueta ?>
-                        <?php if ($field->requerido): ?><span class="text-red-500">*</span><?php endif; ?>
-                    </label>
+            
+            <?php
+            // Agrupar campos por secciones
+            $seccionInicialTitulo = $record->form_seccion_inicial_titulo ?? $record->seccion_inicial_titulo ?? 'General';
+            $secciones = [['titulo' => $seccionInicialTitulo, 'campos' => []]];
+            foreach ($fields as $field) {
+                if ($field->tipo === 'separador') {
+                    $secciones[] = ['titulo' => $field->etiqueta, 'campos' => []];
+                } else {
+                    $secciones[count($secciones) - 1]['campos'][] = $field;
+                }
+            }
+            ?>
+
+            <?php foreach ($secciones as $secIdx => $seccion): ?>
+            <?php if (!empty($seccion['campos'])): ?>
+            <div class="section-card bg-white rounded-xl border border-gray-200 p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                    <?= htmlspecialchars($seccion['titulo']) ?>
+                </h3>
+                <div class="space-y-5">
+                    <?php foreach ($seccion['campos'] as $field): ?>
+                    <?php
+                        $condicionPadre = $field->condicion_campo_padre ?? null;
+                        $condicionValor = $field->condicion_valor ?? null;
+                        $valorActual = $field->valor ?? '';
+                    ?>
+                    <div <?php if ($condicionPadre): ?>
+                        x-show="fields['field_<?= $condicionPadre ?>'] === '<?= addslashes($condicionValor) ?>'"
+                        x-transition
+                    <?php endif; ?>>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <?= $field->etiqueta ?>
+                            <?php if ($field->requerido): ?><span class="text-red-500">*</span><?php endif; ?>
+                        </label>
 
                     <?php if (in_array($field->tipo, ['texto', 'numero', 'email', 'telefono', 'url'])): ?>
                         <input type="<?= ['email' => 'email', 'numero' => 'number', 'telefono' => 'tel', 'url' => 'url'][$field->tipo] ?? 'text' ?>"
@@ -168,8 +188,11 @@
                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
             </div>
+            <?php endif; ?>
+            <?php endforeach; ?>
 
             <div class="mt-8 pt-6 border-t border-gray-200 flex items-center space-x-4">
                 <button type="submit"
