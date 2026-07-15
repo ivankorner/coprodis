@@ -33,30 +33,6 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <?php foreach ($fields as $f): ?>
-                <?php if (in_array($f->tipo, ['imagen', 'archivo', 'firma'])): ?>
-                <?php elseif ($f->tipo === 'url' && $f->valor): ?>
-                <div>
-                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
-                    <a href="<?= htmlspecialchars($f->valor) ?>" target="_blank" class="font-medium ml-1 text-blue-600 hover:underline"><?= htmlspecialchars($f->valor) ?></a>
-                </div>
-                <?php elseif ($f->tipo === 'moneda' && $f->valor !== null && $f->valor !== ''): ?>
-                <div>
-                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
-                    <span class="font-medium ml-1">$ <?= number_format((float)$f->valor, 2, ',', '.') ?></span>
-                </div>
-                <?php elseif ($f->tipo === 'porcentaje' && $f->valor !== null && $f->valor !== ''): ?>
-                <div>
-                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
-                    <span class="font-medium ml-1"><?= number_format((float)$f->valor, 2, ',', '.') ?>%</span>
-                </div>
-                <?php else: ?>
-                <div>
-                    <span class="text-gray-500"><?= $f->etiqueta ?>:</span>
-                    <span class="font-medium ml-1"><?= $f->valor ?: '-' ?></span>
-                </div>
-                <?php endif; ?>
-                <?php endforeach; ?>
                 <div>
                     <span class="text-gray-500">Estado:</span>
                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ml-1
@@ -71,34 +47,59 @@
             </div>
         </div>
 
-        <div class="p-6 space-y-4">
-            <?php foreach ($fields as $field): ?>
-            <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider"><?= $field->etiqueta ?></p>
-                <?php if (in_array($field->tipo, ['imagen', 'firma'])): ?>
-                    <?php if ($field->valor): ?>
-                        <img src="<?= APP_URL ?>/<?= $field->valor ?>" class="mt-1 max-h-40 rounded border" alt="<?= $field->etiqueta ?>">
-                    <?php else: ?>
-                        <p class="mt-1 text-sm text-gray-400">-</p>
-                    <?php endif; ?>
-                <?php elseif ($field->tipo === 'archivo' && $field->valor): ?>
-                    <a href="<?= APP_URL ?>/<?= $field->valor ?>" target="_blank"
-                       class="mt-1 inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100">
-                        <i class="fas fa-download mr-1"></i> <?= basename($field->valor) ?>
-                    </a>
-                <?php elseif ($field->tipo === 'url' && $field->valor): ?>
-                    <a href="<?= htmlspecialchars($field->valor) ?>" target="_blank"
-                       class="mt-1 inline-flex items-center text-blue-600 hover:underline text-sm">
-                        <i class="fas fa-external-link-alt mr-1"></i> <?= htmlspecialchars($field->valor) ?>
-                    </a>
-                <?php elseif ($field->tipo === 'moneda' && $field->valor !== null && $field->valor !== ''): ?>
-                    <p class="mt-1 text-sm font-medium text-gray-900">$ <?= number_format((float)$field->valor, 2, ',', '.') ?></p>
-                <?php elseif ($field->tipo === 'porcentaje' && $field->valor !== null && $field->valor !== ''): ?>
-                    <p class="mt-1 text-sm font-medium text-gray-900"><?= number_format((float)$field->valor, 2, ',', '.') ?>%</p>
-                <?php else: ?>
-                    <p class="mt-1 text-sm text-gray-900"><?= nl2br($field->valor ?? '-') ?></p>
-                <?php endif; ?>
+        <?php
+        $seccionInicialTitulo = $record->seccion_inicial_titulo ?? 'General';
+        $secciones = [['titulo' => $seccionInicialTitulo, 'campos' => []]];
+        foreach ($fields as $field) {
+            if ($field->tipo === 'separador') {
+                $secciones[] = ['titulo' => $field->etiqueta, 'campos' => []];
+            } else {
+                $secciones[count($secciones) - 1]['campos'][] = $field;
+            }
+        }
+        ?>
+        <div class="p-6 space-y-6">
+            <?php foreach ($secciones as $seccion): ?>
+            <?php if (!empty($seccion['campos'])): ?>
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center">
+                        <i class="fas fa-folder-open text-blue-500 mr-2 text-xs"></i>
+                        <?= htmlspecialchars($seccion['titulo']) ?>
+                    </h3>
+                </div>
+                <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    <?php foreach ($seccion['campos'] as $field): ?>
+                    <div class="<?= in_array($field->tipo, ['textarea', 'imagen', 'archivo', 'firma']) ? 'sm:col-span-2' : '' ?>">
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider"><?= $field->etiqueta ?></p>
+                        <?php if (in_array($field->tipo, ['imagen', 'firma'])): ?>
+                            <?php if ($field->valor): ?>
+                                <img src="<?= APP_URL ?>/<?= $field->valor ?>" class="mt-1.5 max-h-40 rounded border" alt="<?= $field->etiqueta ?>">
+                            <?php else: ?>
+                                <p class="mt-1.5 text-sm text-gray-400">-</p>
+                            <?php endif; ?>
+                        <?php elseif ($field->tipo === 'archivo' && $field->valor): ?>
+                            <a href="<?= APP_URL ?>/<?= $field->valor ?>" target="_blank"
+                               class="mt-1.5 inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100">
+                                <i class="fas fa-download mr-1"></i> <?= basename($field->valor) ?>
+                            </a>
+                        <?php elseif ($field->tipo === 'url' && $field->valor): ?>
+                            <a href="<?= htmlspecialchars($field->valor) ?>" target="_blank"
+                               class="mt-1.5 inline-flex items-center text-blue-600 hover:underline text-sm">
+                                <i class="fas fa-external-link-alt mr-1"></i> <?= htmlspecialchars($field->valor) ?>
+                            </a>
+                        <?php elseif ($field->tipo === 'moneda' && $field->valor !== null && $field->valor !== ''): ?>
+                            <p class="mt-1.5 text-sm font-semibold text-gray-900">$ <?= number_format((float)$field->valor, 2, ',', '.') ?></p>
+                        <?php elseif ($field->tipo === 'porcentaje' && $field->valor !== null && $field->valor !== ''): ?>
+                            <p class="mt-1.5 text-sm font-semibold text-gray-900"><?= number_format((float)$field->valor, 2, ',', '.') ?>%</p>
+                        <?php else: ?>
+                            <p class="mt-1.5 text-sm text-gray-900"><?= nl2br($field->valor ?? '-') ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
+            <?php endif; ?>
             <?php endforeach; ?>
         </div>
     </div>

@@ -243,7 +243,7 @@ class RecordController extends Controller
         $db = Database::getInstance();
 
         $record = $db->fetch(
-            "SELECT r.*, f.titulo as form_titulo, u.apellido, u.nombre, u.email as user_email
+            "SELECT r.*, f.titulo as form_titulo, f.seccion_inicial_titulo, u.apellido, u.nombre, u.email as user_email
              FROM records r
              JOIN forms f ON r.form_id = f.id
              JOIN users u ON r.user_id = u.id
