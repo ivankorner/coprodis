@@ -7,7 +7,6 @@ use App\Core\Request;
 use App\Core\Database;
 use App\Core\Session;
 use App\Services\AuditService;
-use App\Services\MailService;
 use App\Services\NotificationService;
 use App\Services\FileUploadService;
 use App\Helpers\Validator;
@@ -174,8 +173,6 @@ class RecordController extends Controller
             'user_id' => $userId,
         ]);
 
-        $emailCliente = null;
-        $nombreCliente = null;
         $datosParaCorreo = [];
 
         foreach ($fields as $field) {
@@ -215,37 +212,25 @@ class RecordController extends Controller
                         'valor' => $value,
                     ]);
                     $datosParaCorreo[$field->etiqueta] = $value;
-
-                    // Detectar email del cliente
-                    if ($emailCliente === null) {
-                        $esEmail = ($field->tipo === 'email') ||
-                                   ($field->tipo === 'texto' && stripos($field->etiqueta, 'email') !== false);
-                        if ($esEmail && filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                            $emailCliente = $value;
-                        }
-                    }
-                    if ($nombreCliente === null &&
-                        stripos($field->etiqueta, 'nombre') !== false) {
-                        $nombreCliente = $value;
-                    }
                 }
             }
         }
 
         $detallesRegistro = array_merge(['formulario' => $form->titulo], $datosParaCorreo);
-        AuditService::register('crear_registro', 'registros', "Registro #{$recordId} creado en: {$form->titulo}", null, 'success', $detallesRegistro, 'record', $recordId);
+        try {
+            AuditService::register('crear_registro', 'registros', "Registro #{$recordId} creado en: {$form->titulo}", null, 'success', $detallesRegistro, 'record', $recordId);
+        } catch (\Throwable $e) {
+            error_log("AuditService error: " . $e->getMessage());
+        }
 
-        // Enviar email de confirmación al cliente si hay campo email en el formulario
-        if ($emailCliente) {
-            if (!$nombreCliente) {
-                $nombreCliente = explode('@', $emailCliente)[0];
-            }
-            MailService::sendRegistrationConfirmation(
-                $emailCliente,
-                $nombreCliente,
-                $form->titulo,
-                $datosParaCorreo
-            );
+        $isAjax = $request->isAjax();
+        if ($isAjax) {
+            ob_end_clean();
+            header_remove();
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'redirect' => APP_URL . '/registros'], JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
         $this->redirectWith(APP_URL . '/registros', 'success', 'Registro creado exitosamente.');
@@ -405,6 +390,16 @@ class RecordController extends Controller
         }
 
         AuditService::register('editar_registro', 'registros', "Registro #{$id} editado", null, 'warning', [], 'record', $id);
+
+        $isAjax = $request->isAjax();
+        if ($isAjax) {
+            ob_end_clean();
+            header_remove();
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'redirect' => APP_URL . "/registros/{$id}"], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
 
         $this->redirectWith(APP_URL . "/registros/{$id}", 'success', 'Registro actualizado exitosamente.');
     }

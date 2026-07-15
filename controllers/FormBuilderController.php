@@ -213,7 +213,7 @@ class FormBuilderController extends Controller
             }
 
             $db->commit();
-            $this->json(['success' => true, 'message' => 'Campos guardados exitosamente.']);
+            $this->json(['success' => true, 'message' => 'Campos guardados exitosamente.', 'redirect' => APP_URL . "/formularios/{$formId}/editar"]);
         } catch (\Exception $e) {
             $db->rollback();
             $this->json(['success' => false, 'message' => 'Error al guardar campos: ' . $e->getMessage()], 500);

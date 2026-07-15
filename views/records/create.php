@@ -11,7 +11,7 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
         <form action="<?= APP_URL ?>/registros/crear/<?= $form->id ?>" method="POST" enctype="multipart/form-data"
-              x-data="formConditional()">
+              x-data="formConditional()" x-ref="form">
             <input type="hidden" name="_csrf_token" value="<?= $csrf_token ?>">
             
             <?php
@@ -251,7 +251,11 @@
             <?php endforeach; ?>
 
             <div class="mt-8 pt-6 border-t border-gray-200 flex items-center space-x-4">
-                <button type="submit"
+                <div x-show="hasDraft" id="draft-indicator" class="mb-4 p-2 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center text-sm w-full">
+                    <span class="text-green-800"><i class="fas fa-save mr-1"></i> Borrador guardado</span>
+                    <button type="button" @click="clearDraft()" class="text-green-600 hover:text-green-800 text-xs">Descartar</button>
+                </div>
+                <button type="button" @click="submitForm()"
                         class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors">
                     <i class="fas fa-save mr-2"></i> Guardar Registro
                 </button>
@@ -315,6 +319,47 @@ function getLocation(fieldId) {
 }
 
 function formConditional() {
+    const STORAGE_KEY = 'form_draft_create_<?= $form->id ?>';
+    const EXCLUDE_TYPES = ['imagen', 'archivo', 'firma'];
+    const fieldTypes = {
+        <?php foreach ($fields as $f): ?>
+        field_<?= $f->id ?>: '<?= $f->tipo ?>',
+        <?php endforeach; ?>
+    };
+
+    function loadDraft() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    }
+
+    function saveDraft(fields) {
+        const toSave = {};
+        Object.entries(fields).forEach(([key, val]) => {
+            if (!EXCLUDE_TYPES.includes(fieldTypes[key])) {
+                toSave[key] = val;
+            }
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    function clearDraft() {
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('draft-indicator')?.remove();
+    }
+
+    function showDraftIndicator() {
+        if (document.getElementById('draft-indicator')) return;
+        const indicator = document.createElement('div');
+        indicator.id = 'draft-indicator';
+        indicator.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-3 py-2 rounded-lg text-sm shadow-lg z-50 flex items-center space-x-2';
+        indicator.innerHTML = '<i class="fas fa-save"></i><span>Borrador guardado</span><button onclick="this.parentElement.remove()" class="ml-2 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>';
+        document.body.appendChild(indicator);
+    }
+
+    localStorage.removeItem(STORAGE_KEY);
+
     return {
         fields: {
             <?php
@@ -325,6 +370,49 @@ function formConditional() {
                 echo "field_{$field->id}: ''";
             endforeach;
             ?>
+        },
+        hasDraft: false,
+        init() {
+            if (this.hasDraft) this.showDraftIndicator();
+            this.$watch('fields', (val) => {
+                saveDraft(val);
+                this.showDraftIndicator();
+            }, { deep: true });
+        },
+        clearDraft() {
+            clearDraft();
+            this.hasDraft = false;
+            Object.keys(this.fields).forEach(k => { this.fields[k] = ''; });
+        },
+        showDraftIndicator() {
+            if (!this.hasDraft) {
+                this.hasDraft = true;
+                this.$nextTick(() => {
+                    if (!document.getElementById('draft-indicator')) showDraftIndicator();
+                });
+            }
+        },
+        async submitForm() {
+            const formEl = this.$refs.form;
+            const formData = new FormData(formEl);
+            Object.entries(this.fields).forEach(([k, v]) => formData.append(k, v));
+
+            try {
+                const resp = await fetch(formEl.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (json.success) {
+                    this.clearDraft();
+                    window.location.href = json.redirect || '<?= APP_URL ?>/registros';
+                } else {
+                    Swal.fire('Error', json.message || 'Error al guardar.', 'error');
+                }
+            } catch {
+                Swal.fire('Error', 'Error de conexión.', 'error');
+            }
         }
     };
 }

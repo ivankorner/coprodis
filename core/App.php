@@ -35,6 +35,20 @@ class App
 
     private function handleException(\Exception $e): void
     {
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+        if ($isAjax) {
+            ob_end_clean();
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'message' => APP_DEBUG ? $e->getMessage() : 'Error interno del servidor'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
         if (APP_DEBUG) {
             echo '<h1>Error</h1>';
             echo '<p>' . $e->getMessage() . '</p>';

@@ -10,7 +10,7 @@
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-        <form action="<?= APP_URL ?>/registros/<?= $record->id ?>/editar" method="POST" enctype="multipart/form-data"
+        <form x-ref="form" action="<?= APP_URL ?>/registros/<?= $record->id ?>/editar" method="POST" enctype="multipart/form-data"
               x-data="formConditional()">
             <input type="hidden" name="_csrf_token" value="<?= $csrf_token ?>">
             
@@ -243,8 +243,61 @@ function getLocation(id) {
 }
 
 function formConditional() {
+    const STORAGE_KEY = 'form_draft_edit_<?= $record->id ?>';
+    const EXCLUDE_TYPES = ['imagen', 'archivo', 'firma'];
+    const fieldTypes = {
+        <?php foreach ($fields as $f): ?>
+        field_<?= $f->id ?>: '<?= $f->tipo ?>',
+        <?php endforeach; ?>
+    };
+
+    function loadDraft() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    }
+
+    function saveDraft(fields) {
+        const toSave = {};
+        Object.entries(fields).forEach(([key, val]) => {
+            if (!EXCLUDE_TYPES.includes(fieldTypes[key])) {
+                toSave[key] = val;
+            }
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    function clearDraft() {
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('draft-indicator')?.remove();
+    }
+
+    function showDraftIndicator() {
+        if (document.getElementById('draft-indicator')) return;
+        const indicator = document.createElement('div');
+        indicator.id = 'draft-indicator';
+        indicator.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-3 py-2 rounded-lg text-sm shadow-lg z-50 flex items-center space-x-2';
+        indicator.innerHTML = '<i class="fas fa-save"></i><span>Borrador guardado</span><button onclick="this.parentElement.remove()" class="ml-2 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>';
+        document.body.appendChild(indicator);
+    }
+
+    const draft = loadDraft();
+
     return {
         fields: {
+            <?php
+            $primero = true;
+            foreach ($fields as $field):
+                if (!$primero) echo ',';
+                $primero = false;
+                $valor = addslashes($field->valor ?? '');
+                echo "field_{$field->id}: '{$valor}' || draft['field_{$field->id}'] || ''";
+            endforeach;
+            ?>
+        },
+        hasDraft: Object.keys(draft).length > 0,
+        originalValues: {
             <?php
             $primero = true;
             foreach ($fields as $field):
@@ -254,6 +307,48 @@ function formConditional() {
                 echo "field_{$field->id}: '{$valor}'";
             endforeach;
             ?>
+        },
+        init() {
+            if (this.hasDraft) this.showDraftIndicator();
+            this.$watch('fields', (val) => {
+                saveDraft(val);
+                this.showDraftIndicator();
+            }, { deep: true });
+        },
+        clearDraft() {
+            clearDraft();
+            this.hasDraft = false;
+            Object.keys(this.fields).forEach(k => { this.fields[k] = this.originalValues[k] || ''; });
+        },
+        showDraftIndicator() {
+            if (!this.hasDraft) {
+                this.hasDraft = true;
+                this.$nextTick(() => {
+                    if (!document.getElementById('draft-indicator')) showDraftIndicator();
+                });
+            }
+        },
+        async submitForm() {
+            const formEl = this.$refs.form;
+            const formData = new FormData(formEl);
+            Object.entries(this.fields).forEach(([k, v]) => formData.append(k, v));
+
+            try {
+                const resp = await fetch(formEl.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (json.success) {
+                    this.clearDraft();
+                    window.location.href = json.redirect || '<?= APP_URL ?>/registros';
+                } else {
+                    Swal.fire('Error', json.message || 'Error al guardar.', 'error');
+                }
+            } catch {
+                Swal.fire('Error', 'Error de conexión.', 'error');
+            }
         }
     };
 }

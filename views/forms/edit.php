@@ -304,31 +304,60 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function formBuilder() {
-    return {
-        fields: <?= json_encode(array_map(function($f) use ($fields) {
-            $padreNombre = '';
-            if ($f->condicion_campo_padre) {
-                foreach ($fields as $pf) {
-                    if ($pf->id == $f->condicion_campo_padre) {
-                        $padreNombre = $pf->nombre;
-                        break;
-                    }
+    const STORAGE_KEY = 'form_builder_<?= $form->id ?>';
+
+    function loadDraft() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
+    }
+
+    function saveDraft(fields) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ fields, timestamp: Date.now() }));
+    }
+
+    function clearDraft() {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function showDraftIndicator() {
+        if (document.getElementById('builder-draft-indicator')) return;
+        const indicator = document.createElement('div');
+        indicator.id = 'builder-draft-indicator';
+        indicator.className = 'fixed bottom-4 left-4 bg-green-600 text-white px-3 py-2 rounded-lg text-sm shadow-lg z-50 flex items-center space-x-2';
+        indicator.innerHTML = '<i class="fas fa-save"></i><span>Borrador guardado</span><button onclick="this.parentElement.remove()" class="ml-2 text-white hover:text-gray-200"><i class="fas fa-times"></i></button>';
+        document.body.appendChild(indicator);
+    }
+
+    const draft = loadDraft();
+    const initialFields = draft?.fields ?? <?= json_encode(array_map(function($f) use ($fields) {
+        $padreNombre = '';
+        if ($f->condicion_campo_padre) {
+            foreach ($fields as $pf) {
+                if ($pf->id == $f->condicion_campo_padre) {
+                    $padreNombre = $pf->nombre;
+                    break;
                 }
             }
-            return [
-                'id' => $f->id,
-                'tipo' => $f->tipo,
-                'nombre' => $f->nombre,
-                'etiqueta' => $f->etiqueta,
-                'placeholder' => $f->placeholder,
-                'ayuda' => $f->ayuda,
-                'requerido' => (bool)$f->requerido,
-                'opciones' => $f->opciones ? json_decode($f->opciones) : [],
-                'condicion_campo_padre_id' => $padreNombre ?: '',
-                'condicion_valor' => $f->condicion_valor ?? '',
-            ];
-        }, $fields ?? [])) ?>,
+        }
+        return [
+            'id' => $f->id,
+            'tipo' => $f->tipo,
+            'nombre' => $f->nombre,
+            'etiqueta' => $f->etiqueta,
+            'placeholder' => $f->placeholder,
+            'ayuda' => $f->ayuda,
+            'requerido' => (bool)$f->requerido,
+            'opciones' => $f->opciones ? json_decode($f->opciones) : [],
+            'condicion_campo_padre_id' => $padreNombre ?: '',
+            'condicion_valor' => $f->condicion_valor ?? '',
+        ];
+    }, $fields ?? [])) ?>;
 
+    return {
+        fields: initialFields,
+        hasDraft: !!draft,
         editingIndex: null,
 
         subPreguntaVisible: null,
@@ -354,6 +383,11 @@ function formBuilder() {
         },
 
         init() {
+            if (this.hasDraft) showDraftIndicator();
+            this.$watch('fields', (val) => {
+                saveDraft(val);
+                showDraftIndicator();
+            }, { deep: true });
             this.$watch('fieldForm.opciones_text', (val) => {
                 const newOpts = val ? val.split('\n').filter(o => o.trim()) : [];
                 const oldOpts = this.fieldForm.opciones_array;
@@ -597,7 +631,10 @@ function formBuilder() {
 
             fetch('<?= APP_URL ?>/formularios/guardar-campos', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: JSON.stringify({
                     form_id: <?= $form->id ?>,
                     fields: toSave.map(f => ({
@@ -618,12 +655,30 @@ function formBuilder() {
             .then(r => r.json())
             .then(d => {
                 if (d.success) {
-                    Swal.fire('Guardado', 'Campos guardados exitosamente.', 'success');
+                    clearDraft();
+                    this.hasDraft = false;
+                    window.location.href = d.redirect || '<?= APP_URL ?>/formularios';
                 } else {
                     Swal.fire('Error', d.message || 'Error al guardar campos.', 'error');
                 }
             })
             .catch(() => Swal.fire('Error', 'Error de conexión.', 'error'));
+        },
+
+        clearDraft() {
+            clearDraft();
+            this.hasDraft = false;
+            this.fields = initialFields;
+            this.resetFieldForm();
+        },
+
+        showDraftIndicator() {
+            if (!this.hasDraft) {
+                this.hasDraft = true;
+                this.$nextTick(() => {
+                    if (!document.getElementById('builder-draft-indicator')) showDraftIndicator();
+                });
+            }
         },
 
         get childFieldCandidates() {
