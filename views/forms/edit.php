@@ -194,14 +194,16 @@
                                         <span class="text-xs text-gray-500 flex-shrink-0"
                                               x-text="'Si: ' + opt"></span>
                                         <div class="flex-1"></div>
-                                        <span x-show="fieldForm.sub_preguntas[opt]"
-                                              class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded flex-shrink-0">
-                                            <i class="fas fa-check mr-1"></i> Vinculado
+                                        <span x-show="fieldForm.sub_preguntas[opt] && fieldForm.sub_preguntas[opt].length > 0"
+                                              class="text-xs px-2 py-0.5 rounded flex-shrink-0"
+                                              :class="editingIndex !== null ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50'">
+                                            <i class="fas" :class="editingIndex !== null ? 'fa-check' : 'fa-clock'"></i>
+                                            <span x-text="fieldForm.sub_preguntas[opt].length + ' campo(s)'"></span>
                                         </span>
                                         <button type="button" @click="openSubPreguntaForm(opt)"
                                                 class="flex-shrink-0 px-2 py-1.5 text-xs text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                                                :title="fieldForm.sub_preguntas[opt] ? 'Editar campo vinculado' : 'Crear campo nuevo para esta opción'">
-                                            <i class="fas" :class="fieldForm.sub_preguntas[opt] ? 'fa-pen' : 'fa-plus'"></i>
+                                                :title="(fieldForm.sub_preguntas[opt] && fieldForm.sub_preguntas[opt].length > 0) ? 'Editar campo vinculado' : 'Crear campo nuevo para esta opción'">
+                                            <i class="fas" :class="(fieldForm.sub_preguntas[opt] && fieldForm.sub_preguntas[opt].length > 0) ? 'fa-pen' : 'fa-plus'"></i>
                                         </button>
                                     </div>
 
@@ -214,6 +216,26 @@
                                             <button type="button" @click="subPreguntaVisible = null" class="text-gray-400 hover:text-gray-600">
                                                 <i class="fas fa-times text-xs"></i>
                                             </button>
+                                        </div>
+
+                                        <div x-show="fieldForm.sub_preguntas[opt] && fieldForm.sub_preguntas[opt].length > 0"
+                                             class="space-y-1.5 bg-gray-50 rounded-lg p-2">
+                                            <p class="text-xs font-medium text-gray-600">Campos agregados:</p>
+                                            <template x-for="(child, childIdx) in fieldForm.sub_preguntas[opt]" :key="childIdx">
+                                                <div class="flex items-center justify-between bg-white rounded px-2 py-1 border border-gray-100">
+                                                    <div class="flex items-center space-x-2 min-w-0">
+                                                        <span class="text-xs text-gray-500 font-medium whitespace-nowrap" x-text="child.tipo.charAt(0).toUpperCase() + child.tipo.slice(1)"></span>
+                                                        <span class="text-xs text-gray-700 truncate" x-text="'\"' + child.etiqueta + '\"'"></span>
+                                                    </div>
+                                                    <button type="button" @click="removeChildSubPregunta(opt, childIdx)"
+                                                            class="text-red-400 hover:text-red-600 flex-shrink-0 ml-2">
+                                                        <i class="fas fa-times text-xs"></i>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                            <p x-show="editingIndex === null" class="text-xs text-amber-500">
+                                                <i class="fas fa-info-circle mr-1"></i> Se guardarán al crear el campo
+                                            </p>
                                         </div>
 
                                         <div>
@@ -400,8 +422,9 @@ function formBuilder() {
                 const oldOpts = this.fieldForm.opciones_array;
                 const newSub = {};
                 newOpts.forEach(opt => {
-                    newSub[opt] = (oldOpts.includes(opt) && this.fieldForm.sub_preguntas[opt])
-                        ? this.fieldForm.sub_preguntas[opt] : '';
+                    const oldEntry = this.fieldForm.sub_preguntas[opt];
+                    newSub[opt] = (oldOpts.includes(opt) && oldEntry && Array.isArray(oldEntry))
+                        ? oldEntry : [];
                 });
                 this.fieldForm.opciones_array = newOpts;
                 this.fieldForm.sub_preguntas = newSub;
@@ -452,7 +475,7 @@ function formBuilder() {
                 opciones = this.fieldForm.opciones_text.split('\n').filter(o => o.trim());
             }
 
-            this.fields.push({
+            const parentField = {
                 tipo: this.fieldForm.tipo,
                 nombre: nombre,
                 etiqueta: this.fieldForm.etiqueta,
@@ -460,7 +483,31 @@ function formBuilder() {
                 ayuda: esSeparador ? '' : this.fieldForm.ayuda,
                 requerido: esSeparador ? false : this.fieldForm.requerido,
                 opciones: opciones,
-            });
+            };
+
+            const fieldsToAdd = [parentField];
+
+            if (!esSeparador && ['select', 'radio'].includes(this.fieldForm.tipo)) {
+                const parentNombre = parentField.nombre;
+                this.fieldForm.opciones_array.forEach(opt => {
+                    const children = this.fieldForm.sub_preguntas[opt] || [];
+                    children.forEach(childData => {
+                        fieldsToAdd.push({
+                            tipo: childData.tipo,
+                            nombre: childData.nombre,
+                            etiqueta: childData.etiqueta,
+                            placeholder: childData.placeholder || '',
+                            ayuda: '',
+                            requerido: false,
+                            opciones: childData.opciones || [],
+                            condicion_campo_padre_id: parentNombre,
+                            condicion_valor: opt,
+                        });
+                    });
+                });
+            }
+
+            this.fields.push(...fieldsToAdd);
 
             this.resetFieldForm();
         },
@@ -473,11 +520,18 @@ function formBuilder() {
             const subPreguntas = {};
 
             if (['select', 'radio'].includes(field.tipo) && (field.id || field.nombre)) {
-                opcionesArray.forEach(opt => { subPreguntas[opt] = ''; });
+                opcionesArray.forEach(opt => { subPreguntas[opt] = []; });
                 const parentId = field.id || field.nombre;
                 this.fields.forEach(f => {
                     if (f.condicion_campo_padre_id == parentId && f.condicion_valor) {
-                        subPreguntas[f.condicion_valor] = f.id || f.nombre;
+                        if (!subPreguntas[f.condicion_valor]) subPreguntas[f.condicion_valor] = [];
+                        subPreguntas[f.condicion_valor].push({
+                            tipo: f.tipo,
+                            nombre: f.nombre,
+                            etiqueta: f.etiqueta,
+                            placeholder: f.placeholder || '',
+                            opciones: Array.isArray(f.opciones) ? f.opciones : [],
+                        });
                     }
                 });
             }
@@ -572,25 +626,26 @@ function formBuilder() {
                 opciones = form.opciones_text.split('\n').filter(o => o.trim());
             }
 
-            const parentField = this.editingIndex !== null
-                ? this.fields[this.editingIndex]
-                : this.fieldForm;
-
-            const newField = {
+            const childEntry = {
                 tipo: form.tipo,
                 nombre: nombre,
                 etiqueta: form.etiqueta,
-                placeholder: form.placeholder,
-                ayuda: '',
-                requerido: false,
+                placeholder: form.placeholder || '',
                 opciones: opciones,
-                condicion_campo_padre_id: parentField.id || parentField.nombre,
-                condicion_valor: opt,
             };
 
-            // Insertar después del último hijo condicional para mantener jerarquía
             if (this.editingIndex !== null) {
+                const parentField = this.fields[this.editingIndex];
                 const parentKey = parentField.id || parentField.nombre;
+
+                const newField = {
+                    ...childEntry,
+                    ayuda: '',
+                    requerido: false,
+                    condicion_campo_padre_id: parentKey,
+                    condicion_valor: opt,
+                };
+
                 let insertIdx = this.editingIndex + 1;
                 const descendantKeys = new Set();
                 while (insertIdx < this.fields.length) {
@@ -604,14 +659,37 @@ function formBuilder() {
                     }
                 }
                 this.fields.splice(insertIdx, 0, newField);
-            } else {
-                this.fields.push(newField);
             }
-            this.fieldForm.sub_preguntas[opt] = nombre;
-            this.subPreguntaVisible = null;
+
+            if (!this.fieldForm.sub_preguntas[opt]) {
+                this.fieldForm.sub_preguntas[opt] = [];
+            }
+            this.fieldForm.sub_preguntas[opt].push(childEntry);
+
             this.subPreguntaForm = {
                 tipo: 'texto', etiqueta: '', nombre: '', placeholder: '', opciones_text: '',
             };
+        },
+
+        removeChildSubPregunta(opt, childIndex) {
+            const children = this.fieldForm.sub_preguntas[opt];
+            if (!children || childIndex >= children.length) return;
+
+            const child = children[childIndex];
+
+            if (this.editingIndex !== null) {
+                const fieldIdx = this.fields.findIndex(f => f.nombre === child.nombre);
+                if (fieldIdx !== -1) {
+                    this.fields.splice(fieldIdx, 1);
+                    if (this.editingIndex > fieldIdx) {
+                        this.editingIndex--;
+                    }
+                }
+            }
+
+            const updated = [...children];
+            updated.splice(childIndex, 1);
+            this.fieldForm.sub_preguntas[opt] = updated;
         },
 
         removeField(index) {
@@ -644,13 +722,16 @@ function formBuilder() {
                 if (idx === -1) return;
                 const opciones = Array.isArray(toSave[idx].opciones) ? toSave[idx].opciones : [];
                 opciones.forEach(opt => {
-                    if (allSubs[opt]) {
-                        const childIdx = toSave.findIndex(c => c.id == allSubs[opt] || c.nombre === allSubs[opt]);
+                    const children = allSubs[opt] || [];
+                    children.forEach(childData => {
+                        const childNombre = childData.nombre;
+                        if (!childNombre) return;
+                        const childIdx = toSave.findIndex(c => c.nombre === childNombre);
                         if (childIdx !== -1) {
                             toSave[childIdx].condicion_campo_padre = fId;
                             toSave[childIdx].condicion_valor = opt;
                         }
-                    }
+                    });
                 });
             });
 
