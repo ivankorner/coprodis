@@ -16,3 +16,11 @@ Thumbs.db
 *.log
 CONFIG.md
 MEMORY.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+storage/exports/*
+!storage/exports/.gitkeep

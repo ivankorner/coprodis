@@ -3,12 +3,34 @@
     "version": "1.0.0",
     "description": "COPRODIS - Consejo Provincial de Discapacidad",
     "dependencies": {
+        "@fortawesome/fontawesome-free": "^6.7",
         "alpinejs": "^3.14",
         "chart.js": "^4.4",
         "datatables.net": "^2.1",
-        "sweetalert2": "^11.14",
         "flatpickr": "^4.6",
         "signature_pad": "^5.0",
-        "@fortawesome/fontawesome-free": "^6.7"
+        "sweetalert2": "^11.14"
+    },
+    "main": "index.js",
+    "directories": {
+        "doc": "docs"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ivankorner/coprodis.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "bugs": {
+        "url": "https://github.com/ivankorner/coprodis/issues"
+    },
+    "homepage": "https://github.com/ivankorner/coprodis#readme",
+    "devDependencies": {
+        "@playwright/test": "^1.61.1"
     }
 }
