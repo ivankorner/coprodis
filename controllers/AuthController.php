@@ -19,7 +19,7 @@ class AuthController extends Controller
     public function login(Request $request): void
     {
         $email = $request->get('email');
-        $password = $request->get('password');
+        $password = $request->getRaw('password');
         $remember = $request->get('remember');
 
         if (!$email || !$password) {
@@ -71,8 +71,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request): void
     {
         $token = $request->get('token');
-        $password = $request->get('password');
-        $passwordConfirmation = $request->get('password_confirmation');
+        $password = $request->getRaw('password');
+        $passwordConfirmation = $request->getRaw('password_confirmation');
 
         if (!$password || $password !== $passwordConfirmation) {
             $this->redirectWith(APP_URL . '/reset-password/' . $token, 'error', 'Las contraseñas no coinciden.');
@@ -99,9 +99,9 @@ class AuthController extends Controller
     public function changePassword(Request $request): void
     {
         $userId = \App\Core\Session::userId();
-        $currentPassword = $request->get('current_password');
-        $newPassword = $request->get('password');
-        $confirmPassword = $request->get('password_confirmation');
+        $currentPassword = $request->getRaw('current_password');
+        $newPassword = $request->getRaw('password');
+        $confirmPassword = $request->getRaw('password_confirmation');
 
         if (!$currentPassword || !$newPassword) {
             $this->redirectWith(APP_URL . '/change-password', 'error', 'Todos los campos son obligatorios.');

@@ -75,7 +75,7 @@ class MailService
         return self::sendWithTemplate($to, 'Recuperación de Contraseña - COPRODIS', [
             'nombre' => $nombre,
             'mensaje' => 'Has solicitado restablecer tu contraseña en el sistema COPRODIS.',
-            'detalle' => 'Haz clic en el siguiente enlace para crear una nueva contraseña:',
+            'detalle' => 'Haz clic en el botón "Restablecer Contraseña" para crear una nueva contraseña. IMPORTANTE: El enlace contiene un código de verificación, NO es una contraseña temporal. No intentes usar el enlace ni el código como contraseña para iniciar sesión.',
             'accion_url' => $url,
             'accion_texto' => 'Restablecer Contraseña',
             'nota' => 'Este enlace expirará en 1 hora. Si no solicitaste este cambio, ignora este mensaje.',

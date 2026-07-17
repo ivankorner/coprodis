@@ -6,6 +6,7 @@ class Request
 {
     private array $params = [];
     private array $body = [];
+    private array $rawBody = [];
     private array $queryParams = [];
 
     public function __construct()
@@ -20,12 +21,16 @@ class Request
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (stripos($contentType, 'application/json') !== false) {
             $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $this->rawBody = $input;
             $this->body = $this->sanitizeArray($input);
         } elseif ($this->getMethod() === 'POST') {
+            $this->rawBody = $_POST;
             $this->body = $this->sanitizeArray($_POST);
         } else {
-            parse_str(file_get_contents('php://input'), $this->body);
-            $this->body = $this->sanitizeArray($this->body);
+            $raw = [];
+            parse_str(file_get_contents('php://input'), $raw);
+            $this->rawBody = $raw;
+            $this->body = $this->sanitizeArray($raw);
         }
     }
 
@@ -84,6 +89,13 @@ class Request
     public function get(string $key, $default = null)
     {
         return $this->body[$key] ?? $default;
+    }
+
+    public function getRaw(string $key, $default = null): string
+    {
+        $value = $this->rawBody[$key] ?? $default;
+        if ($value === null) return '';
+        return trim($value);
     }
 
     public function query(string $key, $default = null)

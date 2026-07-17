@@ -105,6 +105,8 @@ class AuthService
             return ['success' => false, 'message' => 'Si el correo existe, recibirás un enlace de recuperación.'];
         }
 
+        $db->update('password_resets', ['usado' => 1], 'user_id = :user_id AND usado = FALSE', ['user_id' => $user->id]);
+
         $token = SecurityHelper::generateToken(32);
         $expiraEn = date('Y-m-d H:i:s', strtotime('+1 hour'));
 

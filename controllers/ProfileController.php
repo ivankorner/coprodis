@@ -45,9 +45,9 @@ class ProfileController extends Controller
     {
         $this->requireAuth();
         $userId = Session::userId();
-        $currentPassword = $request->get('current_password');
-        $newPassword = $request->get('password');
-        $confirmPassword = $request->get('password_confirmation');
+        $currentPassword = $request->getRaw('current_password');
+        $newPassword = $request->getRaw('password');
+        $confirmPassword = $request->getRaw('password_confirmation');
 
         if (!$currentPassword || !$newPassword) {
             $this->redirectWith(APP_URL . '/perfil', 'error', 'Todos los campos son obligatorios.');
