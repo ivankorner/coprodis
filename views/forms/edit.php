@@ -27,8 +27,8 @@
                                  : field.condicion_campo_padre_id
                                    ? 'ml-8 border-l-4 border-green-400 bg-green-50'
                                    : (editingIndex === index ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 bg-white')">
-                            <!-- Move arrows -->
-                            <div class="flex-shrink-0 flex flex-col mr-3 mt-1">
+                            <!-- Move arrows (hidden on child fields) -->
+                            <div x-show="!field.condicion_campo_padre_id" class="flex-shrink-0 flex flex-col mr-3 mt-1">
                                 <button @click="moveField(index, -1)" :disabled="index === 0"
                                         class="p-0.5 text-gray-400 hover:text-blue-600 disabled:opacity-25 disabled:cursor-not-allowed"
                                         title="Mover arriba">
@@ -431,16 +431,69 @@ function formBuilder() {
             });
         },
 
+        getBlock(index) {
+            const field = this.fields[index];
+            if (!field) return { start: index, end: index };
+
+            if (field.condicion_campo_padre_id) {
+                const parentIdx = this.fields.findIndex(f =>
+                    !f.condicion_campo_padre_id &&
+                    (f.id == field.condicion_campo_padre_id || f.nombre === field.condicion_campo_padre_id)
+                );
+                if (parentIdx !== -1) return this.getBlock(parentIdx);
+                return { start: index, end: index };
+            }
+
+            const parentKey = field.nombre || field.id;
+            if (!parentKey) return { start: index, end: index };
+
+            let end = index;
+            const descendantKeys = new Set([parentKey]);
+            for (let i = index + 1; i < this.fields.length; i++) {
+                const f = this.fields[i];
+                if (f.condicion_campo_padre_id && descendantKeys.has(f.condicion_campo_padre_id)) {
+                    end = i;
+                    const fKey = f.nombre || f.id;
+                    if (fKey) descendantKeys.add(fKey);
+                } else {
+                    break;
+                }
+            }
+            return { start: index, end };
+        },
+
         moveField(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= this.fields.length) return;
+            const block = this.getBlock(index);
+            const blockSize = block.end - block.start + 1;
+
+            if (direction === -1 && block.start === 0) return;
+            if (direction === 1 && block.end === this.fields.length - 1) return;
+
+            const neighborIdx = direction === -1 ? block.start - 1 : block.end + 1;
+            const neighborBlock = this.getBlock(neighborIdx);
+            const neighborSize = neighborBlock.end - neighborBlock.start + 1;
+
+            const editedField = this.editingIndex !== null ? this.fields[this.editingIndex] : null;
+
             const items = [...this.fields];
-            [items[index], items[newIndex]] = [items[newIndex], items[index]];
+            const blockItems = items.splice(block.start, blockSize);
+
+            if (direction === -1) {
+                const neighborItems = items.splice(neighborBlock.start, neighborSize);
+                items.splice(neighborBlock.start, 0, ...blockItems, ...neighborItems);
+            } else {
+                const neighborItems = items.splice(block.start, neighborSize);
+                items.splice(block.start, 0, ...neighborItems, ...blockItems);
+            }
+
             this.fields = items;
-            if (this.editingIndex === index) {
-                this.editingIndex = newIndex;
-            } else if (this.editingIndex === newIndex) {
-                this.editingIndex = index;
+
+            if (editedField) {
+                const newIdx = this.fields.findIndex(f =>
+                    (f.id && editedField.id && f.id === editedField.id) ||
+                    (f.nombre && editedField.nombre && f.nombre === editedField.nombre)
+                );
+                if (newIdx !== -1) this.editingIndex = newIdx;
             }
         },
 

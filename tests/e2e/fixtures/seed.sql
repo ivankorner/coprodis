@@ -30,6 +30,10 @@ INSERT INTO form_fields (id, form_id, tipo, nombre, etiqueta, placeholder, reque
     (10, 2, 'texto', 'asistente_social', 'Asistente Social', 'Nombre del asistente', TRUE, 0),
     (11, 2, 'textarea', 'informe', 'Informe', 'Detalle del informe social', TRUE, 1);
 
+-- Conditional field for Form 1 (depends on field 8: medio_contacto = 'Email')
+INSERT INTO form_fields (id, form_id, tipo, nombre, etiqueta, placeholder, requerido, condicion_campo_padre, condicion_valor, orden) VALUES
+    (12, 1, 'texto', 'direccion_email', 'Dirección de email', 'ejemplo@correo.com', FALSE, 8, 'Email', 10);
+
 -- Test records (user_id = 3 = operador@test.com)
 INSERT INTO records (id, form_id, user_id, estado) VALUES
     (1, 1, 3, 'activo'),
