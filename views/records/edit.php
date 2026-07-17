@@ -126,6 +126,36 @@
                             <?php endforeach; ?>
                         </select>
 
+                    <?php elseif ($field->tipo === 'checkbox' && $field->opciones): ?>
+                        <div class="space-y-2">
+                            <?php foreach (json_decode($field->opciones) ?? [] as $opt): ?>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" name="field_<?= $field->id ?>[]" value="<?= $opt ?>"
+                                       <?php if ($valorActual !== '' && in_array($opt, is_array($tmp = json_decode($valorActual, true)) ? $tmp : explode(', ', $valorActual))): ?>checked<?php endif; ?>
+                                       x-model="fields['field_<?= $field->id ?>']"
+                                       class="rounded border-gray-300 text-blue-600">
+                                <span class="text-sm text-gray-700"><?= $opt ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                    <?php elseif ($field->tipo === 'radio' && $field->opciones): ?>
+                        <div class="space-y-2">
+                            <?php foreach (json_decode($field->opciones) ?? [] as $opt): ?>
+                            <label class="flex items-center space-x-2">
+                                <input type="radio" name="field_<?= $field->id ?>" value="<?= $opt ?>"
+                                       <?php if ($field->requerido && !$condicionPadre): ?>required<?php endif; ?>
+                                       <?php if ($condicionPadre): ?>
+                                           :required="fields['field_<?= $condicionPadre ?>'] === '<?= addslashes($condicionValor) ?>'"
+                                       <?php endif; ?>
+                                       <?= $valorActual === $opt ? 'checked' : '' ?>
+                                       x-model="fields['field_<?= $field->id ?>']"
+                                       class="border-gray-300 text-blue-600">
+                                <span class="text-sm text-gray-700"><?= $opt ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+
                     <?php elseif ($field->tipo === 'imagen'): ?>
                         <?php if ($valorActual): ?>
                             <p class="text-sm text-gray-500 mb-2">

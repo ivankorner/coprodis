@@ -176,6 +176,13 @@ class RecordController extends Controller
         $datosParaCorreo = [];
 
         foreach ($fields as $field) {
+            if ($field->condicion_campo_padre && $field->condicion_valor) {
+                $parentValue = $request->get('field_' . $field->condicion_campo_padre);
+                if ($parentValue !== $field->condicion_valor) {
+                    continue;
+                }
+            }
+
             if ($field->tipo === 'firma') {
                 $signatureData = $request->get('field_' . $field->id);
                 if ($signatureData) {
@@ -349,6 +356,13 @@ class RecordController extends Controller
         );
 
         foreach ($fields as $field) {
+            if ($field->condicion_campo_padre && $field->condicion_valor) {
+                $parentValue = $request->get('field_' . $field->condicion_campo_padre);
+                if ($parentValue !== $field->condicion_valor) {
+                    continue;
+                }
+            }
+
             $newValue = $request->get('field_' . $field->id);
 
             if ($field->tipo === 'firma') {

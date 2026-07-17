@@ -79,32 +79,25 @@
             <!-- Form metadata edit -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <h2 class="text-sm font-semibold text-gray-700 mb-4">Información del Formulario</h2>
-                <form action="<?= APP_URL ?>/formularios/<?= $form->id ?>/editar" method="POST">
-                    <input type="hidden" name="_csrf_token" value="<?= $csrf_token ?>">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                            <input type="text" name="titulo" value="<?= $form->titulo ?>" required
-                                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                            <textarea name="descripcion" rows="2"
-                                      class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"><?= $form->descripcion ?></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Título de Sección Inicial</label>
-                            <input type="text" name="seccion_inicial_titulo" value="<?= $form->seccion_inicial_titulo ?? 'General' ?>"
-                                   placeholder="Ej: General, Datos Personales, Información General"
-                                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
-                            <p class="mt-1 text-xs text-gray-500">Título de la primera sección (antes del primer separador)</p>
-                        </div>
-                        <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                            <i class="fas fa-save mr-1"></i> Guardar
-                        </button>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                        <input type="text" x-model="formTitle" required
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
-                </form>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                        <textarea x-model="formDesc" rows="2"
+                                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Título de Sección Inicial</label>
+                        <input type="text" x-model="formSectionTitle"
+                               placeholder="Ej: General, Datos Personales, Información General"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        <p class="mt-1 text-xs text-gray-500">Título de la primera sección (antes del primer separador)</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -385,6 +378,9 @@ function formBuilder() {
 
     return {
         fields: initialFields,
+        formTitle: <?= json_encode($form->titulo) ?>,
+        formDesc: <?= json_encode($form->descripcion ?? '') ?>,
+        formSectionTitle: <?= json_encode($form->seccion_inicial_titulo ?? 'General') ?>,
         hasDraft: !!draft,
         editingIndex: null,
 
@@ -572,11 +568,11 @@ function formBuilder() {
             const opcionesArray = Array.isArray(field.opciones) ? field.opciones : [];
             const subPreguntas = {};
 
-            if (['select', 'radio'].includes(field.tipo) && (field.id || field.nombre)) {
+            if (['select', 'radio'].includes(field.tipo) && field.nombre) {
                 opcionesArray.forEach(opt => { subPreguntas[opt] = []; });
-                const parentId = field.id || field.nombre;
+                const parentNombre = field.nombre;
                 this.fields.forEach(f => {
-                    if (f.condicion_campo_padre_id == parentId && f.condicion_valor) {
+                    if (f.condicion_campo_padre_id === parentNombre && f.condicion_valor) {
                         if (!subPreguntas[f.condicion_valor]) subPreguntas[f.condicion_valor] = [];
                         subPreguntas[f.condicion_valor].push({
                             tipo: f.tipo,
@@ -689,7 +685,7 @@ function formBuilder() {
 
             if (this.editingIndex !== null) {
                 const parentField = this.fields[this.editingIndex];
-                const parentKey = parentField.id || parentField.nombre;
+                const parentKey = parentField.nombre;
 
                 const newField = {
                     ...childEntry,
@@ -704,7 +700,7 @@ function formBuilder() {
                 while (insertIdx < this.fields.length) {
                     const f = this.fields[insertIdx];
                     if (f.condicion_campo_padre_id && (f.condicion_campo_padre_id === parentKey || descendantKeys.has(f.condicion_campo_padre_id))) {
-                        const fKey = f.id || f.nombre;
+                        const fKey = f.nombre;
                         if (fKey) descendantKeys.add(fKey);
                         insertIdx++;
                     } else {
@@ -769,9 +765,9 @@ function formBuilder() {
 
             this.fields.forEach(f => {
                 if (!['select', 'radio'].includes(f.tipo)) return;
-                const fId = f.id || f.nombre;
-                if (!fId) return;
-                const idx = toSave.findIndex(tf => (tf.id && tf.id === f.id) || (!f.id && tf.nombre === f.nombre));
+                const parentNombre = f.nombre;
+                if (!parentNombre) return;
+                const idx = toSave.findIndex(tf => tf.nombre === parentNombre);
                 if (idx === -1) return;
                 const opciones = Array.isArray(toSave[idx].opciones) ? toSave[idx].opciones : [];
                 opciones.forEach(opt => {
@@ -781,7 +777,7 @@ function formBuilder() {
                         if (!childNombre) return;
                         const childIdx = toSave.findIndex(c => c.nombre === childNombre);
                         if (childIdx !== -1) {
-                            toSave[childIdx].condicion_campo_padre = fId;
+                            toSave[childIdx].condicion_campo_padre = parentNombre;
                             toSave[childIdx].condicion_valor = opt;
                         }
                     });
@@ -796,6 +792,9 @@ function formBuilder() {
                 },
                 body: JSON.stringify({
                     form_id: <?= $form->id ?>,
+                    titulo: this.formTitle,
+                    descripcion: this.formDesc,
+                    seccion_inicial_titulo: this.formSectionTitle,
                     fields: toSave.map(f => ({
                         tipo: f.tipo,
                         nombre: f.nombre,

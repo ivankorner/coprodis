@@ -134,6 +134,9 @@ class FormBuilderController extends Controller
     {
         $formId = (int)$request->get('form_id');
         $fields = $request->get('fields', []);
+        $titulo = $request->get('titulo');
+        $descripcion = $request->get('descripcion');
+        $seccionInicialTitulo = $request->get('seccion_inicial_titulo');
 
         $db = Database::getInstance();
 
@@ -145,6 +148,14 @@ class FormBuilderController extends Controller
 
         $db->beginTransaction();
         try {
+            $db->update('forms', [
+                'titulo' => $titulo,
+                'descripcion' => $descripcion ?? null,
+                'seccion_inicial_titulo' => $seccionInicialTitulo ?? 'General',
+            ], 'id = :id', ['id' => $formId]);
+
+            AuditService::register('editar_formulario', 'formularios', "Formulario editado: {$titulo}", null, 'warning', [], 'form', $formId);
+
             $db->update('form_fields', ['deleted_at' => date('Y-m-d H:i:s')], 'form_id = :form_id', ['form_id' => $formId]);
 
             $orden = 0;

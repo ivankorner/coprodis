@@ -395,7 +395,6 @@ function formConditional() {
         async submitForm() {
             const formEl = this.$refs.form;
             const formData = new FormData(formEl);
-            Object.entries(this.fields).forEach(([k, v]) => formData.append(k, v));
 
             try {
                 const resp = await fetch(formEl.action, {
