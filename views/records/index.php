@@ -237,23 +237,11 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <div x-show="!loading && !initialLoad" class="flex items-center gap-1.5 text-sm text-gray-500">
-                        <span class="font-medium text-gray-700" x-text="total"></span>
-                        <span>registro<span x-show="total !== 1">s</span> encontrado<span x-show="total !== 1">s</span></span>
-                        <span x-show="totalPages > 1" class="text-gray-300 mx-1">·</span>
-                        <span x-show="totalPages > 1" class="text-gray-400" x-text="'Pág. ' + page + ' de ' + totalPages"></span>
-                    </div>
-                    <div x-show="!loading && !initialLoad && total > 0" class="flex items-center gap-2 text-sm text-gray-500">
-                        <span>Mostrar</span>
-                        <select x-model="perPage" @change="page = 1; fetchRecords()"
-                                class="px-2 py-1 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-blue-500 transition-colors">
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
+                <div x-show="!loading && !initialLoad" class="text-sm text-gray-500 text-center sm:text-left">
+                    <span class="font-semibold text-gray-800" x-text="total.toLocaleString()"></span>
+                    <span> registro<span x-show="total !== 1">s</span> encontrado<span x-show="total !== 1">s</span></span>
+                    <span x-show="totalPages > 1" class="text-gray-300 mx-1.5">·</span>
+                    <span x-show="totalPages > 1" class="text-gray-500">Página <span class="font-medium text-gray-700" x-text="page"></span> de <span class="font-medium text-gray-700" x-text="totalPages"></span></span>
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -298,38 +286,67 @@
 
                     <div x-show="totalPages > 0" x-cloak class="px-4 sm:px-6 py-3 border-t border-gray-200">
                         <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <div class="text-sm text-gray-500" x-text="recordRange"></div>
+                            <div class="text-sm text-gray-500 whitespace-nowrap" x-text="recordRange"></div>
                             <nav x-show="totalPages > 1" class="flex items-center gap-1">
                                 <button @click="goToPage(1)" :disabled="page <= 1"
-                                        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg transition-colors"
-                                        :class="page <= 1 ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-50 text-gray-600'">
+                                        class="p-1.5 text-sm border border-gray-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        :class="page <= 1 ? 'text-gray-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'">
                                     <i class="fas fa-angle-double-left"></i>
                                 </button>
                                 <button @click="goToPage(page - 1)" :disabled="page <= 1"
-                                        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg transition-colors"
-                                        :class="page <= 1 ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-50 text-gray-600'">
+                                        class="p-1.5 text-sm border border-gray-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        :class="page <= 1 ? 'text-gray-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'">
                                     <i class="fas fa-angle-left"></i>
                                 </button>
 
+                                <button @click="goToPage(1)"
+                                        class="px-3 py-1.5 text-sm border rounded-lg font-medium transition-colors min-w-[36px]"
+                                        :class="1 === page ? 'bg-blue-600 text-white border-blue-600 cursor-default shadow-sm' : 'border-gray-300 text-gray-600 hover:bg-gray-50'">
+                                    1
+                                </button>
+
+                                <span x-show="hasLeadingEllipsis" class="px-1.5 text-gray-400 select-none text-sm">…</span>
+
                                 <template x-for="p in visiblePages" :key="p">
                                     <button @click="goToPage(p)"
-                                            class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg font-medium transition-colors"
-                                            :class="p === page ? 'bg-blue-600 text-white border-blue-600 cursor-default' : 'hover:bg-gray-50 text-gray-600'"
+                                            class="px-3 py-1.5 text-sm border rounded-lg font-medium transition-colors min-w-[36px]"
+                                            :class="p === page ? 'bg-blue-600 text-white border-blue-600 cursor-default shadow-sm' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
                                             x-text="p">
                                     </button>
                                 </template>
 
+                                <span x-show="hasTrailingEllipsis" class="px-1.5 text-gray-400 select-none text-sm">…</span>
+
+                                <button x-show="totalPages > 1" @click="goToPage(totalPages)"
+                                        class="px-3 py-1.5 text-sm border rounded-lg font-medium transition-colors min-w-[36px]"
+                                        :class="totalPages === page ? 'bg-blue-600 text-white border-blue-600 cursor-default shadow-sm' : 'border-gray-300 text-gray-600 hover:bg-gray-50'"
+                                        x-text="totalPages">
+                                </button>
+
                                 <button @click="goToPage(page + 1)" :disabled="page >= totalPages"
-                                        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg transition-colors"
-                                        :class="page >= totalPages ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-50 text-gray-600'">
+                                        class="p-1.5 text-sm border border-gray-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        :class="page >= totalPages ? 'text-gray-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'">
                                     <i class="fas fa-angle-right"></i>
                                 </button>
                                 <button @click="goToPage(totalPages)" :disabled="page >= totalPages"
-                                        class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg transition-colors"
-                                        :class="page >= totalPages ? 'opacity-40 cursor-not-allowed text-gray-400' : 'hover:bg-gray-50 text-gray-600'">
+                                        class="p-1.5 text-sm border border-gray-300 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        :class="page >= totalPages ? 'text-gray-400' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'">
                                     <i class="fas fa-angle-double-right"></i>
                                 </button>
                             </nav>
+                            <div x-show="total > 0" class="flex items-center gap-2 text-sm text-gray-500 whitespace-nowrap">
+                                <span>Mostrar</span>
+                                <select x-model="perPage" @change="page = 1; fetchRecords()"
+                                        class="px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-colors cursor-pointer">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                    <option value="500">500</option>
+                                </select>
+                                <span>registros</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -390,7 +407,7 @@ function searchComponent() {
             if (this.total === 0 || this.initialLoad) return '';
             const start = (this.page - 1) * this.perPage + 1;
             const end = Math.min(this.page * this.perPage, this.total);
-            return 'Mostrando ' + start + '-' + end + ' de ' + this.total + ' registro' + (this.total !== 1 ? 's' : '');
+            return 'Mostrando ' + start.toLocaleString() + '–' + end.toLocaleString() + ' de ' + this.total.toLocaleString() + ' registro' + (this.total !== 1 ? 's' : '');
         },
 
         onFormChange() {
@@ -509,18 +526,36 @@ function searchComponent() {
         get visiblePages() {
             const total = this.totalPages;
             const current = this.page;
-            let start = Math.max(1, current - 2);
-            let end = Math.min(total, current + 2);
-            if (end - start < 4) {
-                if (start === 1) {
-                    end = Math.min(total, start + 4);
+            if (total <= 2) return [];
+            if (total <= 7) {
+                const pages = [];
+                for (let i = 2; i < total; i++) pages.push(i);
+                return pages;
+            }
+            let start = Math.max(2, current - 2);
+            let end = Math.min(total - 1, current + 2);
+            const middleCount = end - start + 1;
+            if (middleCount < 5) {
+                if (start === 2) {
+                    end = Math.min(total - 1, start + 4);
                 } else {
-                    start = Math.max(1, end - 4);
+                    start = Math.max(2, end - 4);
                 }
             }
             const pages = [];
             for (let i = start; i <= end; i++) pages.push(i);
             return pages;
+        },
+
+        get hasLeadingEllipsis() {
+            if (this.totalPages <= 7) return false;
+            return this.visiblePages.length > 0 && this.visiblePages[0] > 2;
+        },
+
+        get hasTrailingEllipsis() {
+            if (this.totalPages <= 7) return false;
+            const vp = this.visiblePages;
+            return vp.length > 0 && vp[vp.length - 1] < this.totalPages - 1;
         },
 
         highlight(text) {

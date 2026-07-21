@@ -27,7 +27,7 @@ class RecordController extends Controller
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
         $perPage = (int)($request->query('per_page', PAGINATION_LIMIT));
-        $allowedPerPage = [10, 25, 50, 100];
+        $allowedPerPage = [10, 25, 50, 100, 250, 500];
         if (!in_array($perPage, $allowedPerPage)) {
             $perPage = PAGINATION_LIMIT;
         }
@@ -128,7 +128,7 @@ class RecordController extends Controller
         $fechaHasta = $request->query('fecha_hasta');
         $page = max(1, (int)($request->query('page', 1)));
         $perPage = (int)($request->query('per_page', PAGINATION_LIMIT));
-        $allowedPerPage = [10, 25, 50, 100];
+        $allowedPerPage = [10, 25, 50, 100, 250, 500];
         if (!in_array($perPage, $allowedPerPage)) {
             $perPage = PAGINATION_LIMIT;
         }
