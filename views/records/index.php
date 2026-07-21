@@ -16,7 +16,7 @@
 [x-cloak] { display: none !important; }
 </style>
 
-<div class="space-y-5"
+<div class="space-y-8"
      x-data="searchComponent()"
      @keydown.window.ctrl.k.prevent="if (formLoaded || showAllMode) $refs.searchInput.focus()"
      @keydown.window.meta.k.prevent="if (formLoaded || showAllMode) $refs.searchInput.focus()">
@@ -88,7 +88,7 @@
         </div>
     </div>
 
-    <div>
+    <div class="space-y-8">
 
         <div x-show="!formId && !showAllMode" class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-8 text-center">
             <div class="flex flex-col items-center gap-3">
@@ -100,7 +100,7 @@
             </div>
         </div>
 
-        <div x-show="showAllMode" class="bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5">
+        <div x-show="showAllMode" class="bg-green-50 border border-green-200 rounded-xl p-5 sm:p-6">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
                     <i class="fas fa-eye text-green-600"></i>
@@ -112,8 +112,8 @@
             </div>
         </div>
 
-        <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">1. Seleccioná un formulario</label>
+        <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">1. Seleccioná un formulario</label>
             <select x-model="formId" @change="onFormChange"
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm bg-white focus:border-blue-500 focus:ring-0 outline-none transition-colors text-gray-700 font-medium">
                 <option value="">— Elegí un formulario —</option>
@@ -124,8 +124,8 @@
         </div>
 
         <template x-if="formLoaded || showAllMode">
-            <div class="space-y-4">
-                <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
+            <div class="space-y-6">
+                <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 sm:p-6">
                     <div class="flex items-center justify-between mb-3">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">2. Campos de búsqueda</label>
                         <span class="text-xs text-gray-400" x-text="selectedFieldIds.length + ' seleccionados'"></span>
@@ -169,15 +169,15 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
+                <div class="bg-gradient-to-r from-blue-50 to-white rounded-xl shadow-sm border border-blue-200 p-4 sm:p-5">
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-blue-400 text-base"></i>
                         </div>
                         <input x-ref="searchInput" x-model="q" @input.debounce.300ms="doSearch"
                                type="text" :placeholder="showAllMode ? 'Buscar en todos los registros...' : 'Buscar en los campos seleccionados...'"
-                               class="w-full pl-10 pr-28 py-2.5 border-2 border-gray-200 rounded-lg text-sm placeholder-gray-400
-                                      focus:border-blue-500 focus:ring-0 transition-colors outline-none">
+                               class="w-full pl-12 pr-28 py-3.5 border-2 border-blue-200 rounded-xl text-sm placeholder-gray-400
+                                       bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none shadow-sm">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3 gap-1.5">
                             <button x-show="q" @click="q = ''; doSearch()"
                                     class="p-0.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
@@ -213,7 +213,7 @@
                      x-transition:leave="transition ease-in duration-150"
                      x-transition:leave-start="opacity-100 translate-y-0"
                      x-transition:leave-end="opacity-0 -translate-y-2"
-                     class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                     class="bg-gray-50 rounded-xl border border-gray-200 p-5">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
@@ -284,7 +284,7 @@
                         </table>
                     </div>
 
-                    <div x-show="totalPages > 0" x-cloak class="px-4 sm:px-6 py-3 border-t border-gray-200">
+                    <div x-show="totalPages > 0" x-cloak class="px-4 sm:px-6 py-4 border-t border-gray-200">
                         <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div class="text-sm text-gray-500 whitespace-nowrap" x-text="recordRange"></div>
                             <nav x-show="totalPages > 1" class="flex items-center gap-1">
@@ -432,7 +432,7 @@ function searchComponent() {
                 .then(r => r.json())
                 .then(data => {
                     this.fields = data.fields;
-                    this.selectedFieldIds = data.fields.filter(f => f.es_comun).map(f => f.id);
+                    this.selectedFieldIds = [];
                     this.formLoaded = true;
                     this.$nextTick(() => this.doSearch());
                 });
