@@ -204,10 +204,15 @@ class Validator
         $column = $params[1] ?? $field;
         $excludeId = $params[2] ?? null;
         $excludeColumn = $params[3] ?? 'id';
+        $ignoreSoftDeleted = ($params[4] ?? '') === 'true';
 
         $db = \App\Core\Database::getInstance();
         $sql = "SELECT COUNT(*) as count FROM {$table} WHERE {$column} = :value";
         $bindings = ['value' => $value];
+
+        if ($ignoreSoftDeleted) {
+            $sql .= " AND deleted_at IS NULL";
+        }
 
         if ($excludeId) {
             $sql .= " AND {$excludeColumn} != :exclude_id";

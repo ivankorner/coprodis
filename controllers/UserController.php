@@ -101,8 +101,8 @@ class UserController extends Controller
         $validator = Validator::validate($data, [
             'apellido' => 'required|max:100',
             'nombre' => 'required|max:100',
-            'dni' => 'required|dni|unique:users,dni',
-            'email' => 'required|email|unique:users,email',
+            'dni' => 'required|dni|unique:users,dni,,,true',
+            'email' => 'required|email|unique:users,email,,,true',
             'rol_id' => 'required|exists:roles,id',
         ]);
 
@@ -160,8 +160,8 @@ class UserController extends Controller
         $validator = Validator::validate($data, [
             'apellido' => 'required|max:100',
             'nombre' => 'required|max:100',
-            'dni' => "required|dni|unique:users,dni,{$id}",
-            'email' => "required|email|unique:users,email,{$id}",
+            'dni' => "required|dni|unique:users,dni,{$id},id,true",
+            'email' => "required|email|unique:users,email,{$id},id,true",
         ]);
 
         if ($validator->fails()) {

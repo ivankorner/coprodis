@@ -1,0 +1,2 @@
+ALTER TABLE users DROP INDEX `email`;
+ALTER TABLE users DROP INDEX `dni`;
