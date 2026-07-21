@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?> - <?= $titulo ?? 'Dashboard' ?></title>
+    <script>tailwind={config:{darkMode:'class'}}</script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/dark-mode.css">
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -15,7 +17,7 @@
         .sidebar-transition { transition: all 0.3s ease; }
     </style>
 </head>
-<body class="h-full bg-gray-50 antialiased" x-data="{ sidebarOpen: window.innerWidth >= 1024, mobileMenuOpen: false }"
+<body class="h-full bg-gray-50 antialiased" x-data="layoutManager()"
       @resize.window="sidebarOpen = window.innerWidth >= 1024">
     <div class="min-h-screen flex">
         <!-- Sidebar -->
@@ -161,6 +163,13 @@
                             </div>
                         </div>
 
+                        <!-- Dark Mode Toggle -->
+                        <button @click="toggleDarkMode"
+                                class="text-gray-500 hover:text-gray-700 transition-colors"
+                                :title="darkMode ? 'Modo claro' : 'Modo oscuro'">
+                            <i class="fas text-lg" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+                        </button>
+
                         <!-- User Menu -->
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open"
@@ -217,7 +226,31 @@
     </div>
 
     <script>
+        (function() {
+            var d = localStorage.getItem('darkMode');
+            if (d === 'true' || (!d && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
+    <script>
         document.addEventListener('alpine:init', () => {
+            Alpine.data('layoutManager', () => ({
+                sidebarOpen: window.innerWidth >= 1024,
+                mobileMenuOpen: false,
+                darkMode: document.documentElement.classList.contains('dark'),
+                init() {
+                    this.$watch('darkMode', val => {
+                        document.documentElement.classList.toggle('dark', val);
+                        localStorage.setItem('darkMode', val);
+                    });
+                },
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                }
+            }));
+
             Alpine.data('notificationBadge', () => ({
                 count: 0,
                 init() {

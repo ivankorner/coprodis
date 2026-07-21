@@ -1,0 +1,317 @@
+html {
+  transition: background-color 0.2s ease;
+}
+html.dark,
+html.dark body {
+  background-color: rgb(17 24 39);
+}
+html.dark body {
+  color: rgb(209 213 219);
+}
+html.dark *,
+html.dark *::before,
+html.dark *::after {
+  border-color: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+html.dark .bg-white {
+  background-color: rgb(31 41 55);
+}
+html.dark .bg-gray-50 {
+  background-color: rgb(17 24 39);
+}
+html.dark .bg-gray-100 {
+  background-color: rgb(55 65 81);
+}
+html.dark .bg-gray-200 {
+  background-color: rgb(75 85 99);
+}
+html.dark .bg-blue-50 {
+  background-color: rgb(30 58 138 / 0.25);
+}
+html.dark .bg-green-50 {
+  background-color: rgb(22 101 52 / 0.25);
+}
+html.dark .bg-red-50 {
+  background-color: rgb(127 29 29 / 0.25);
+}
+html.dark .bg-amber-50 {
+  background-color: rgb(120 53 15 / 0.25);
+}
+html.dark .bg-purple-50 {
+  background-color: rgb(107 33 168 / 0.25);
+}
+html.dark .bg-indigo-50 {
+  background-color: rgb(55 48 163 / 0.25);
+}
+html.dark .bg-emerald-50 {
+  background-color: rgb(6 78 59 / 0.25);
+}
+html.dark .bg-blue-100 {
+  background-color: rgb(30 58 138 / 0.35);
+}
+html.dark .bg-blue-200 {
+  background-color: rgb(30 58 138 / 0.45);
+}
+html.dark .bg-green-100 {
+  background-color: rgb(22 101 52 / 0.35);
+}
+html.dark .bg-red-100 {
+  background-color: rgb(127 29 29 / 0.35);
+}
+html.dark .bg-amber-100 {
+  background-color: rgb(120 53 15 / 0.35);
+}
+html.dark .bg-purple-100 {
+  background-color: rgb(107 33 168 / 0.35);
+}
+html.dark .bg-gray-800 {
+  background-color: rgb(31 41 55);
+}
+html.dark .bg-gray-900 {
+  background-color: rgb(3 7 18);
+}
+html.dark .text-gray-900 {
+  color: rgb(243 244 246);
+}
+html.dark .text-gray-800 {
+  color: rgb(229 231 235);
+}
+html.dark .text-gray-700 {
+  color: rgb(209 213 219);
+}
+html.dark .text-gray-600 {
+  color: rgb(156 163 175);
+}
+html.dark .text-gray-500 {
+  color: rgb(156 163 175);
+}
+html.dark .text-gray-400 {
+  color: rgb(107 114 128);
+}
+html.dark .text-gray-300 {
+  color: rgb(156 163 175);
+}
+html.dark .text-blue-600 {
+  color: rgb(96 165 250);
+}
+html.dark .text-blue-700 {
+  color: rgb(147 197 253);
+}
+html.dark .text-blue-800 {
+  color: rgb(191 219 254);
+}
+html.dark .text-green-600 {
+  color: rgb(74 222 128);
+}
+html.dark .text-green-700,
+html.dark .text-green-800 {
+  color: rgb(134 239 172);
+}
+html.dark .text-red-600 {
+  color: rgb(248 113 113);
+}
+html.dark .text-red-700 {
+  color: rgb(252 165 165);
+}
+html.dark .text-indigo-600 {
+  color: rgb(129 140 248);
+}
+html.dark .text-teal-600 {
+  color: rgb(45 212 191);
+}
+html.dark .text-amber-600 {
+  color: rgb(251 191 36);
+}
+html.dark .text-purple-600 {
+  color: rgb(192 132 252);
+}
+html.dark .border-gray-100 {
+  border-color: rgb(55 65 81);
+}
+html.dark .border-gray-200 {
+  border-color: rgb(55 65 81);
+}
+html.dark .border-gray-300 {
+  border-color: rgb(75 85 99);
+}
+html.dark .border-blue-200 {
+  border-color: rgb(30 58 138 / 0.5);
+}
+html.dark .border-green-200 {
+  border-color: rgb(22 101 52 / 0.5);
+}
+html.dark .border-red-200 {
+  border-color: rgb(127 29 29 / 0.5);
+}
+html.dark .border-amber-200 {
+  border-color: rgb(120 53 15 / 0.5);
+}
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(55 65 81);
+}
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-xl {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+}
+html.dark .shadow-xl {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+}
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: rgb(55 65 81);
+  border-color: rgb(75 85 99);
+  color: rgb(229 231 235);
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: rgb(59 130 246);
+  --tw-ring-color: rgb(59 130 246 / 0.3);
+}
+html.dark input:disabled,
+html.dark select:disabled,
+html.dark textarea:disabled {
+  background-color: rgb(75 85 99);
+  color: rgb(156 163 175);
+}
+html.dark option {
+  background-color: rgb(31 41 55);
+  color: rgb(229 231 235);
+}
+html.dark .bg-gradient-to-br.from-blue-50,
+html.dark .bg-gradient-to-br.from-blue-50.to-indigo-50 {
+  background-image: linear-gradient(to bottom right, rgb(30 58 138 / 0.25), rgb(55 48 163 / 0.15));
+}
+html.dark .bg-gradient-to-r.from-blue-50.to-white {
+  background-image: linear-gradient(to right, rgb(30 58 138 / 0.25), rgb(31 41 55));
+}
+html.dark .hover\:bg-gray-50:hover {
+  background-color: rgb(55 65 81);
+}
+html.dark .hover\:bg-blue-50:hover {
+  background-color: rgb(30 58 138 / 0.3);
+}
+html.dark .hover\:bg-red-50:hover {
+  background-color: rgb(127 29 29 / 0.3);
+}
+html.dark .hover\:bg-amber-50:hover {
+  background-color: rgb(120 53 15 / 0.3);
+}
+html.dark .hover\:bg-purple-50:hover {
+  background-color: rgb(107 33 168 / 0.3);
+}
+html.dark .bg-green-200 {
+  background-color: rgb(22 101 52 / 0.45);
+}
+html.dark .bg-amber-200 {
+  background-color: rgb(120 53 15 / 0.45);
+}
+html.dark .bg-red-200 {
+  background-color: rgb(127 29 29 / 0.45);
+}
+html.dark .hover\:bg-blue-200:hover {
+  background-color: rgb(30 58 138 / 0.4);
+}
+html.dark .hover\:bg-green-200:hover {
+  background-color: rgb(22 101 52 / 0.4);
+}
+html.dark .hover\:bg-amber-200:hover {
+  background-color: rgb(120 53 15 / 0.4);
+}
+html.dark .hover\:bg-red-200:hover {
+  background-color: rgb(127 29 29 / 0.4);
+}
+html.dark .hover\:bg-gray-200:hover {
+  background-color: rgb(75 85 99);
+}
+html.dark .hover\:text-blue-600:hover {
+  color: rgb(96 165 250);
+}
+html.dark .hover\:text-gray-600:hover {
+  color: rgb(156 163 175);
+}
+html.dark .hover\:text-gray-700:hover {
+  color: rgb(209 213 219);
+}
+html.dark .hover\:text-gray-800:hover {
+  color: rgb(229 231 235);
+}
+html.dark .hover\:text-gray-900:hover {
+  color: rgb(243 244 246);
+}
+html.dark .hover\:bg-green-50:hover {
+  background-color: rgb(22 101 52 / 0.3);
+}
+html.dark .hover\:shadow-md:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+}
+html.dark .skeleton-pulse .bg-gray-200 {
+  background-color: rgb(75 85 99);
+}
+html.dark mark,
+html.dark .bg-amber-200\/70 {
+  background-color: rgb(120 53 15 / 0.5);
+  color: rgb(253 230 138);
+}
+html.dark .ring-2.ring-green-300 {
+  --tw-ring-color: rgb(22 101 52 / 0.5);
+}
+html.dark .bg-opacity-50 {
+  --tw-bg-opacity: 0.7;
+}
+html.dark .swal2-popup {
+  background: rgb(31 41 55) !important;
+  color: rgb(229 231 235) !important;
+}
+html.dark .swal2-title {
+  color: rgb(243 244 246) !important;
+}
+html.dark .swal2-html-container {
+  color: rgb(209 213 219) !important;
+}
+html.dark .swal2-cancel.swal2-styled {
+  background-color: rgb(55 65 81) !important;
+  color: rgb(229 231 235) !important;
+}
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: rgb(17 24 39);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgb(75 85 99);
+  border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 114 128);
+}
+html.dark .text-green-800 {
+  color: rgb(134 239 172);
+}
+html.dark .text-amber-800 {
+  color: rgb(252 211 77);
+}
+html.dark .text-amber-900 {
+  color: rgb(254 243 199);
+}
+html.dark .text-red-800 {
+  color: rgb(252 165 165);
+}
+html.dark .border-blue-300 {
+  border-color: rgb(30 58 138 / 0.6);
+}
+html.dark .hover\:border-gray-300:hover {
+  border-color: rgb(75 85 99);
+}
+html.dark header.sticky input::placeholder {
+  color: rgb(156 163 175);
+}
+html.dark canvas {
+  background: transparent;
+}

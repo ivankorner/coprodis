@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?></title>
+    <script>tailwind={config:{darkMode:'class'}}</script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/dark-mode.css">
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.x/dist/cdn.min.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -13,7 +15,15 @@
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="h-full bg-gray-50 antialiased">
+<body class="h-full bg-gray-50 antialiased" x-data="themeManager()">
+    <div class="fixed top-4 right-4 z-50">
+        <button @click="toggleDarkMode"
+                class="w-9 h-9 flex items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-gray-700 transition-colors"
+                :title="darkMode ? 'Modo claro' : 'Modo oscuro'">
+            <i class="fas text-sm" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+        </button>
+    </div>
+
     <div class="min-h-screen flex flex-col justify-center items-center px-4 py-12 sm:px-6 lg:px-8">
         <div class="w-full max-w-md">
             <div class="text-center mb-8">
@@ -36,6 +46,32 @@
             &copy; <?= date('Y') ?> <?= APP_NAME ?>. Todos los derechos reservados.
         </p>
     </div>
+
+    <script>
+        (function() {
+            var d = localStorage.getItem('darkMode');
+            if (d === 'true' || (!d && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('themeManager', () => ({
+                darkMode: document.documentElement.classList.contains('dark'),
+                init() {
+                    this.$watch('darkMode', val => {
+                        document.documentElement.classList.toggle('dark', val);
+                        localStorage.setItem('darkMode', val);
+                    });
+                },
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                }
+            }));
+        });
+    </script>
 
     <script>
         function togglePassword(btn) {

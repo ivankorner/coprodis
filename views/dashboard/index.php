@@ -116,6 +116,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('formChart');
     if (ctx) {
+        const isDark = document.documentElement.classList.contains('dark');
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -123,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Registros',
                     data: <?= json_encode(array_map(fn($f) => (int)$f->total, $registrosPorFormulario ?? [])) ?>,
-                    backgroundColor: 'rgba(37, 99, 235, 0.7)',
-                    borderColor: 'rgb(37, 99, 235)',
+                    backgroundColor: isDark ? 'rgba(96, 165, 250, 0.6)' : 'rgba(37, 99, 235, 0.7)',
+                    borderColor: isDark ? 'rgb(96, 165, 250)' : 'rgb(37, 99, 235)',
                     borderWidth: 1
                 }]
             },
@@ -133,8 +134,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { ticks: { maxRotation: 45, font: { size: 10 } } }
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            color: isDark ? '#9ca3af' : '#6b7280'
+                        },
+                        grid: { color: isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            font: { size: 10 },
+                            color: isDark ? '#9ca3af' : '#6b7280'
+                        },
+                        grid: { color: isDark ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0,0,0,0.05)' }
+                    }
                 }
             }
         });
