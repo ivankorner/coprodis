@@ -90,6 +90,42 @@ test.describe('Formularios dinámicos', () => {
     await expect(page.locator('p.text-green-600', { hasText: 'Sub-pregunta de: ¿Tiene energía eléctrica?' })).toHaveCount(1);
   });
 
+  test('Migra borradores antiguos de sub-preguntas antes de guardar', async ({ page }) => {
+    const forms = new FormBuilderPage(page);
+    await forms.createForm('Test borrador condicional', 'Compatibilidad con borradores previos');
+
+    await page.evaluate(() => {
+      const formId = window.location.pathname.match(/formularios\/(\d+)\/editar/)[1];
+      localStorage.setItem(`form_builder_${formId}`, JSON.stringify({
+        fields: [
+          {
+            id: 9001,
+            tipo: 'radio',
+            nombre: 'tiene_servicio',
+            etiqueta: '¿Tiene servicio?',
+            opciones: ['Sí', 'No'],
+          },
+          {
+            id: 9002,
+            tipo: 'texto',
+            nombre: 'detalle_servicio',
+            etiqueta: 'Detalle del servicio',
+            // Formato de borrador anterior: ID del padre, no nombre interno.
+            condicion_campo_padre: 9001,
+            condicion_valor: 'Sí',
+          },
+        ],
+        timestamp: Date.now(),
+      }));
+    });
+
+    await page.reload();
+    await forms.saveFields();
+
+    await expect(page.locator('.border-l-4.border-green-400')).toHaveCount(1);
+    await expect(page.locator('p.text-green-600', { hasText: 'Sub-pregunta de: ¿Tiene servicio?' })).toHaveCount(1);
+  });
+
   test('Eliminar formulario', async ({ page }) => {
     const forms = new FormBuilderPage(page);
     await forms.createForm('Form para eliminar', 'Será eliminado');

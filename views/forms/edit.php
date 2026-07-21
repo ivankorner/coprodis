@@ -351,8 +351,43 @@ function formBuilder() {
         document.body.appendChild(indicator);
     }
 
+    function normalizeConditionalFields(fields) {
+        if (!Array.isArray(fields)) return [];
+
+        const normalizedFields = fields.map(field => ({ ...field }));
+        const parentNamesById = new Map();
+        const parentNames = new Set();
+
+        normalizedFields.forEach(field => {
+            if (field.tipo === 'separador' || !field.nombre) return;
+
+            const name = String(field.nombre);
+            parentNames.add(name);
+            if (field.id !== undefined && field.id !== null && field.id !== '') {
+                parentNamesById.set(String(field.id), name);
+            }
+        });
+
+        return normalizedFields.map(field => {
+            // Los borradores anteriores guardaban el ID de base de datos en
+            // `condicion_campo_padre`. El editor actual usa el nombre interno,
+            // que permanece estable aun cuando los campos se recrean al guardar.
+            const rawParent = field.condicion_campo_padre_id || field.condicion_campo_padre || '';
+            const parentKey = String(rawParent);
+            const parentName = parentNames.has(parentKey)
+                ? parentKey
+                : (parentNamesById.get(parentKey) || '');
+
+            return {
+                ...field,
+                condicion_campo_padre_id: parentName,
+                condicion_valor: parentName ? (field.condicion_valor || '') : '',
+            };
+        });
+    }
+
     const draft = loadDraft();
-    const initialFields = draft?.fields ?? <?= json_encode(array_map(function($f) use ($fields) {
+    const initialFields = normalizeConditionalFields(draft?.fields ?? <?= json_encode(array_map(function($f) use ($fields) {
         $padreNombre = '';
         if ($f->condicion_campo_padre) {
             foreach ($fields as $pf) {
@@ -374,7 +409,7 @@ function formBuilder() {
             'condicion_campo_padre_id' => $padreNombre ?: '',
             'condicion_valor' => $f->condicion_valor ?? '',
         ];
-    }, $fields ?? [])) ?>;
+    }, $fields ?? [])) ?>);
 
     return {
         fields: initialFields,
@@ -407,6 +442,7 @@ function formBuilder() {
         },
 
         init() {
+            this.fields = normalizeConditionalFields(this.fields);
             this.fields = this.reorderFields(this.fields);
             if (this.hasDraft) showDraftIndicator();
             this.$watch('fields', (val) => {
@@ -855,7 +891,7 @@ function formBuilder() {
         },
 
         saveFields() {
-            const toSave = this.fields.map(f => ({
+            const toSave = normalizeConditionalFields(this.fields).map(f => ({
                 ...f,
                 condicion_campo_padre: f.condicion_campo_padre_id || null,
                 condicion_valor: f.condicion_valor || null,
