@@ -122,6 +122,8 @@ $router->group(['middleware' => AuthMiddleware::class], function (Router $router
     // ============================================
     // API / AJAX ENDPOINTS
     // ============================================
+    $router->get('/api/registros/buscar', 'RecordController@buscarAjax');
+    $router->get('/api/formularios/{id}/campos-busqueda', 'RecordController@camposBusqueda');
     $router->get('/api/notificaciones/no-leidas', 'NotificationController@unreadCount');
     $router->get('/api/notificaciones/ultimas', 'NotificationController@latest');
 });

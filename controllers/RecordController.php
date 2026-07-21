@@ -6,6 +6,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Database;
 use App\Core\Session;
+use App\Core\Response;
 use App\Services\AuditService;
 use App\Services\NotificationService;
 use App\Services\FileUploadService;
@@ -110,6 +111,208 @@ class RecordController extends Controller
             'filtroEstado' => $estado,
             'filtroFechaDesde' => $fechaDesde,
             'filtroFechaHasta' => $fechaHasta,
+        ]);
+    }
+
+    public function buscarAjax(Request $request): void
+    {
+        $this->requireAuth();
+        $this->requirePasswordChange();
+
+        $db = Database::getInstance();
+        $q = $request->query('q');
+        $formId = $request->query('form_id');
+        $fieldIds = $request->query('field_ids') ? (array)$request->query('field_ids') : [];
+        $estado = $request->query('estado');
+        $fechaDesde = $request->query('fecha_desde');
+        $fechaHasta = $request->query('fecha_hasta');
+        $page = max(1, (int)($request->query('page', 1)));
+        $perPage = (int)($request->query('per_page', PAGINATION_LIMIT));
+        $allowedPerPage = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowedPerPage)) {
+            $perPage = PAGINATION_LIMIT;
+        }
+
+        $userRole = Session::userRole();
+        $userId = Session::userId();
+
+        $where = [];
+        $params = [];
+
+        if ($userRole === 'usuario') {
+            $where[] = 'r.user_id = :user_id';
+            $params['user_id'] = $userId;
+        }
+
+        if (!$formId) {
+            Response::json([
+                'records' => [],
+                'total' => 0,
+                'page' => 1,
+                'totalPages' => 0,
+                'perPage' => $perPage,
+                'q' => $q,
+            ]);
+        }
+
+        $where[] = 'r.form_id = :form_id';
+        $params['form_id'] = (int)$formId;
+
+        if ($q) {
+            $searchTerm = "%{$q}%";
+            $searchParts = ['r.id = :search_id'];
+            $params['search_id'] = is_numeric($q) ? (int)$q : 0;
+
+            if (!empty($fieldIds)) {
+                $fieldPlaceholders = [];
+                foreach ($fieldIds as $i => $fid) {
+                    $key = 'fid_' . $i;
+                    $fieldPlaceholders[] = ':' . $key;
+                    $params[$key] = (int)$fid;
+                }
+                $fieldInSql = implode(',', $fieldPlaceholders);
+                $searchParts[] = "EXISTS (
+                    SELECT 1 FROM record_data rd2
+                    WHERE rd2.record_id = r.id
+                    AND rd2.valor LIKE :q_valor
+                    AND rd2.field_id IN ({$fieldInSql})
+                )";
+                $params['q_valor'] = $searchTerm;
+            }
+
+            $where[] = '(' . implode(' OR ', $searchParts) . ')';
+        }
+
+        if ($estado) {
+            $where[] = 'r.estado = :estado';
+            $params['estado'] = $estado;
+        }
+        if ($fechaDesde) {
+            $where[] = 'r.created_at >= :fecha_desde';
+            $params['fecha_desde'] = $fechaDesde . ' 00:00:00';
+        }
+        if ($fechaHasta) {
+            $where[] = 'r.created_at <= :fecha_hasta';
+            $params['fecha_hasta'] = $fechaHasta . ' 23:59:59';
+        }
+
+        $whereClause = 'WHERE ' . implode(' AND ', $where) . ' AND r.deleted_at IS NULL';
+        $offset = ($page - 1) * $perPage;
+
+        $records = $db->fetchAll(
+            "SELECT r.*, f.titulo as form_titulo,
+                    COALESCE(
+                        (SELECT rd.valor FROM record_data rd
+                         JOIN form_fields ff ON rd.field_id = ff.id
+                         WHERE rd.record_id = r.id AND ff.etiqueta = 'Apellido' LIMIT 1),
+                        u.apellido
+                    ) as persona_apellido,
+                    COALESCE(
+                        (SELECT rd.valor FROM record_data rd
+                         JOIN form_fields ff ON rd.field_id = ff.id
+                         WHERE rd.record_id = r.id AND ff.etiqueta = 'Nombre' LIMIT 1),
+                        u.nombre
+                    ) as persona_nombre
+             FROM records r
+             JOIN forms f ON r.form_id = f.id
+             JOIN users u ON r.user_id = u.id
+             {$whereClause}
+             ORDER BY r.created_at DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+            $params
+        );
+
+        $matchedFields = [];
+        if ($q && !empty($records) && !empty($fieldIds)) {
+            $recordIds = array_map(fn($r) => $r->id, $records);
+            $recordPlaceholders = implode(',', array_fill(0, count($recordIds), '?'));
+            $fieldPlaceholders = implode(',', array_fill(0, count($fieldIds), '?'));
+            $matchedFieldResults = $db->fetchAll(
+                "SELECT rd.record_id, ff.etiqueta
+                 FROM record_data rd
+                 JOIN form_fields ff ON rd.field_id = ff.id
+                 WHERE rd.record_id IN ({$recordPlaceholders})
+                 AND rd.valor LIKE ?
+                 AND rd.field_id IN ({$fieldPlaceholders})
+                 AND ff.deleted_at IS NULL
+                 GROUP BY rd.record_id, ff.etiqueta",
+                array_merge($recordIds, ["%{$q}%"], $fieldIds)
+            );
+            foreach ($matchedFieldResults as $mf) {
+                $matchedFields[$mf->record_id][] = $mf->etiqueta;
+            }
+        }
+
+        $result = array_map(function($r) use ($matchedFields) {
+            return [
+                'id' => $r->id,
+                'form_titulo' => $r->form_titulo,
+                'persona_apellido' => $r->persona_apellido,
+                'persona_nombre' => $r->persona_nombre,
+                'estado' => $r->estado,
+                'created_at' => date('d/m/Y H:i', strtotime($r->created_at)),
+                'matched_fields' => $matchedFields[$r->id] ?? [],
+            ];
+        }, $records);
+
+        $countSql = "SELECT COUNT(*) as total FROM records r JOIN forms f ON r.form_id = f.id {$whereClause}";
+        $total = (int)$db->fetch($countSql, $params)->total;
+
+        Response::json([
+            'records' => $result,
+            'total' => $total,
+            'page' => $page,
+            'totalPages' => (int)ceil($total / $perPage),
+            'perPage' => $perPage,
+            'q' => $q,
+        ]);
+    }
+
+    public function camposBusqueda(Request $request): void
+    {
+        $this->requireAuth();
+        $db = Database::getInstance();
+        $formId = (int)$request->param('id');
+
+        $form = $db->fetch(
+            "SELECT id, titulo FROM forms WHERE id = :id AND deleted_at IS NULL AND estado = 'publicado'",
+            ['id' => $formId]
+        );
+
+        if (!$form) {
+            Response::error('Formulario no encontrado', 404);
+        }
+
+        $fields = $db->fetchAll(
+            "SELECT id, etiqueta, tipo FROM form_fields
+             WHERE form_id = :form_id AND deleted_at IS NULL
+             AND tipo NOT IN ('imagen', 'archivo', 'firma', 'gps', 'separador')
+             ORDER BY orden",
+            ['form_id' => $formId]
+        );
+
+        $commonKeywords = ['dni', 'nombre', 'apellido', 'email', 'correo', 'teléfono', 'telefono', 'dirección', 'direccion', 'celular', 'whatsapp', 'domicilio'];
+
+        $result = array_map(function($f) use ($commonKeywords) {
+            $lower = mb_strtolower($f->etiqueta, 'UTF-8');
+            $esComun = false;
+            foreach ($commonKeywords as $kw) {
+                if (str_contains($lower, $kw)) {
+                    $esComun = true;
+                    break;
+                }
+            }
+            return [
+                'id' => (int)$f->id,
+                'etiqueta' => $f->etiqueta,
+                'tipo' => $f->tipo,
+                'es_comun' => $esComun,
+            ];
+        }, $fields);
+
+        Response::json([
+            'form' => ['id' => (int)$form->id, 'titulo' => $form->titulo],
+            'fields' => $result,
         ]);
     }
 
