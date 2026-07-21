@@ -6,6 +6,47 @@
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <?php if ($userRole === 'usuario'): ?>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-medium text-gray-500">Mis Registros</p>
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-alt text-blue-600"></i>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-gray-900"><?= $stats['mis_registros'] ?></p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-medium text-gray-500">Registros Hoy</p>
+                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-file-alt text-purple-600"></i>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-purple-600"><?= $stats['registros_hoy'] ?></p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-medium text-gray-500">Registros del Mes</p>
+                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-calendar-alt text-amber-600"></i>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-amber-600"><?= $stats['registros_mes'] ?></p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-medium text-gray-500">Notificaciones</p>
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-bell text-green-600"></i>
+                </div>
+            </div>
+            <p class="text-2xl font-bold text-green-600"><?= $stats['notificaciones_no_leidas'] ?></p>
+        </div>
+        <?php else: ?>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <div class="flex items-center justify-between mb-3">
                 <p class="text-sm font-medium text-gray-500">Total Usuarios</p>
@@ -45,6 +86,7 @@
             </div>
             <p class="text-2xl font-bold text-amber-600"><?= $stats['registros_mes'] ?></p>
         </div>
+        <?php endif; ?>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-6">
@@ -54,6 +96,7 @@
             <canvas id="formChart" height="200"></canvas>
         </div>
 
+        <?php if ($userRole !== 'usuario'): ?>
         <!-- Recent Activity -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
             <h3 class="text-sm font-semibold text-gray-700 mb-4">Actividad Reciente</h3>
@@ -76,6 +119,7 @@
                 <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Recent Records -->
@@ -89,19 +133,23 @@
                     <tr>
                         <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Formulario</th>
+                        <?php if ($userRole !== 'usuario'): ?>
                         <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usuario</th>
+                        <?php endif; ?>
                         <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     <?php if (empty($ultimosRegistros)): ?>
-                        <tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">Sin registros</td></tr>
+                        <tr><td colspan="<?= $userRole === 'usuario' ? 3 : 4 ?>" class="px-6 py-8 text-center text-sm text-gray-500">Sin registros</td></tr>
                     <?php else: ?>
                         <?php foreach ($ultimosRegistros as $r): ?>
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 sm:px-6 py-3 text-sm font-medium text-gray-900">#<?= $r->id ?></td>
                             <td class="px-4 sm:px-6 py-3 text-sm text-gray-700"><?= $r->form_titulo ?></td>
+                            <?php if ($userRole !== 'usuario'): ?>
                             <td class="px-4 sm:px-6 py-3 text-sm text-gray-700"><?= $r->apellido . ' ' . $r->nombre ?></td>
+                            <?php endif; ?>
                             <td class="px-4 sm:px-6 py-3 text-sm text-gray-500"><?= date('d/m/Y H:i', strtotime($r->created_at)) ?></td>
                         </tr>
                         <?php endforeach; ?>
