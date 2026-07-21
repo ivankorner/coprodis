@@ -144,7 +144,10 @@ class RecordController extends Controller
             $params['user_id'] = $userId;
         }
 
-        if (!$formId) {
+        if ($formId && $formId !== 'todos') {
+            $where[] = 'r.form_id = :form_id';
+            $params['form_id'] = (int)$formId;
+        } elseif (!$formId) {
             Response::json([
                 'records' => [],
                 'total' => 0,
@@ -154,9 +157,6 @@ class RecordController extends Controller
                 'q' => $q,
             ]);
         }
-
-        $where[] = 'r.form_id = :form_id';
-        $params['form_id'] = (int)$formId;
 
         if ($q) {
             $searchTerm = "%{$q}%";
@@ -178,6 +178,13 @@ class RecordController extends Controller
                     AND rd2.field_id IN ({$fieldInSql})
                 )";
                 $params['q_valor'] = $searchTerm;
+            } elseif ($formId === 'todos') {
+                $searchParts[] = "EXISTS (
+                    SELECT 1 FROM record_data rd2
+                    WHERE rd2.record_id = r.id
+                    AND rd2.valor LIKE :q_valor
+                )";
+                $params['q_valor'] = $searchTerm;
             }
 
             $where[] = '(' . implode(' OR ', $searchParts) . ')';
@@ -196,7 +203,7 @@ class RecordController extends Controller
             $params['fecha_hasta'] = $fechaHasta . ' 23:59:59';
         }
 
-        $whereClause = 'WHERE ' . implode(' AND ', $where) . ' AND r.deleted_at IS NULL';
+        $whereClause = ($where ? 'WHERE ' . implode(' AND ', $where) . ' AND ' : 'WHERE ') . 'r.deleted_at IS NULL';
         $offset = ($page - 1) * $perPage;
 
         $records = $db->fetchAll(

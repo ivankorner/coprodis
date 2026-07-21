@@ -16,7 +16,10 @@
 [x-cloak] { display: none !important; }
 </style>
 
-<div class="space-y-5">
+<div class="space-y-5"
+     x-data="searchComponent()"
+     @keydown.window.ctrl.k.prevent="if (formLoaded || showAllMode) $refs.searchInput.focus()"
+     @keydown.window.meta.k.prevent="if (formLoaded || showAllMode) $refs.searchInput.focus()">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 class="text-2xl font-bold text-gray-900">Registros</h1>
         <div class="flex space-x-2">
@@ -48,6 +51,13 @@
                 </div>
             </div>
 
+            <button @click="toggleShowAll()"
+                    :class="showAllMode ? 'bg-green-600 text-white hover:bg-green-700 ring-2 ring-green-300' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'"
+                    class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                <i class="fas" :class="showAllMode ? 'fa-eye-slash mr-2' : 'fa-eye mr-2'"></i>
+                <span x-text="showAllMode ? 'Ocultar todos' : 'Mostrar Registros'"></span>
+            </button>
+
             <div class="relative" x-data="{ open: false }">
                 <button @click="open = !open"
                         class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors">
@@ -78,11 +88,9 @@
         </div>
     </div>
 
-    <div x-data="searchComponent()"
-         @keydown.window.ctrl.k.prevent="if (formLoaded) $refs.searchInput.focus()"
-         @keydown.window.meta.k.prevent="if (formLoaded) $refs.searchInput.focus()">
+    <div>
 
-        <div x-show="!formId" class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-8 text-center">
+        <div x-show="!formId && !showAllMode" class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-8 text-center">
             <div class="flex flex-col items-center gap-3">
                 <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
                     <i class="fas fa-search text-xl text-blue-500"></i>
@@ -92,7 +100,19 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
+        <div x-show="showAllMode" class="bg-green-50 border border-green-200 rounded-xl p-4 sm:p-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                    <i class="fas fa-eye text-green-600"></i>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-green-800">Mostrando todos los registros</h3>
+                    <p class="text-sm text-green-600">Se están mostrando registros de todos los formularios. Usá los filtros para acotar la búsqueda.</p>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">1. Seleccioná un formulario</label>
             <select x-model="formId" @change="onFormChange"
                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm bg-white focus:border-blue-500 focus:ring-0 outline-none transition-colors text-gray-700 font-medium">
@@ -103,9 +123,9 @@
             </select>
         </div>
 
-        <template x-if="formLoaded">
+        <template x-if="formLoaded || showAllMode">
             <div class="space-y-4">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
+                <div x-show="!showAllMode" class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5">
                     <div class="flex items-center justify-between mb-3">
                         <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">2. Campos de búsqueda</label>
                         <span class="text-xs text-gray-400" x-text="selectedFieldIds.length + ' seleccionados'"></span>
@@ -155,7 +175,7 @@
                             <i class="fas fa-search text-gray-400"></i>
                         </div>
                         <input x-ref="searchInput" x-model="q" @input.debounce.300ms="doSearch"
-                               type="text" placeholder="Buscar en los campos seleccionados..."
+                               type="text" :placeholder="showAllMode ? 'Buscar en todos los registros...' : 'Buscar en los campos seleccionados...'"
                                class="w-full pl-10 pr-28 py-2.5 border-2 border-gray-200 rounded-lg text-sm placeholder-gray-400
                                       focus:border-blue-500 focus:ring-0 transition-colors outline-none">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3 gap-1.5">
@@ -338,6 +358,7 @@ function searchComponent() {
         loading: false,
         initialLoad: true,
         filtersOpen: false,
+        showAllMode: false,
 
         init() {
             if (this.formId) {
@@ -416,13 +437,17 @@ function searchComponent() {
         },
 
         fetchRecords() {
-            if (!this.formId || this.selectedFieldIds.length === 0) return;
+            if (!this.showAllMode && (!this.formId || this.selectedFieldIds.length === 0)) return;
             this.loading = true;
             const params = new URLSearchParams();
             if (this.q) params.set('q', this.q);
-            params.set('form_id', this.formId);
-            for (const fid of this.selectedFieldIds) {
-                params.append('field_ids[]', fid);
+            if (this.showAllMode) {
+                params.set('form_id', 'todos');
+            } else {
+                params.set('form_id', this.formId);
+                for (const fid of this.selectedFieldIds) {
+                    params.append('field_ids[]', fid);
+                }
             }
             if (this.estado) params.set('estado', this.estado);
             if (this.fechaDesde) params.set('fecha_desde', this.fechaDesde);
@@ -442,7 +467,8 @@ function searchComponent() {
                 this.initialLoad = false;
                 this.renderTable();
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error('Error fetching records:', err);
                 this.loading = false;
                 this.initialLoad = false;
             });
@@ -452,6 +478,25 @@ function searchComponent() {
             if (p < 1 || p > this.totalPages) return;
             this.page = p;
             this.fetchRecords();
+        },
+
+        toggleShowAll() {
+            this.showAllMode = !this.showAllMode;
+            if (this.showAllMode) {
+                this.page = 1;
+                this.q = '';
+                this.records = [];
+                this.fetchRecords();
+            } else {
+                this.formId = '';
+                this.formLoaded = false;
+                this.records = [];
+                this.total = 0;
+                this.totalPages = 0;
+                this.initialLoad = true;
+                this.q = '';
+                this.page = 1;
+            }
         },
 
         clearExtraFilters() {
