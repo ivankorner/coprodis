@@ -15,7 +15,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-sm font-semibold text-gray-700">Campos del Formulario</h2>
-                    <span class="text-xs text-gray-500" x-text="fields.length + ' campo(s)'"></span>
+                    <span class="text-xs text-gray-500" x-text="`${fields.length} campo(s)`"></span>
                 </div>
 
                 <!-- Field list -->
@@ -45,16 +45,16 @@
                                     <span class="text-xs font-medium px-2 py-0.5 rounded"
                                           :class="field.tipo === 'separador' ? 'text-indigo-600 bg-indigo-50' : field.condicion_campo_padre_id ? 'text-green-700 bg-green-100' : 'text-blue-600 bg-blue-50'">
                                         <i x-show="field.condicion_campo_padre_id" class="fas fa-code-branch mr-1"></i>
-                                        <span x-text="field.condicion_campo_padre_id ? 'Sub-pregunta' : field.tipo.charAt(0).toUpperCase() + field.tipo.slice(1)"></span>
+                                        <span x-text="field.condicion_campo_padre_id ? 'Sub-pregunta' : `${field.tipo.charAt(0).toUpperCase()}${field.tipo.slice(1)}`"></span>
                                     </span>
                                     <span class="text-xs text-gray-500" x-show="field.requerido && field.tipo !== 'separador'">* Requerido</span>
                                     <span class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded" x-show="editingIndex === index">Editando</span>
                                 </div>
                                 <p class="text-sm font-medium text-gray-900" x-text="field.etiqueta || 'Sin etiqueta'"></p>
                                 <p class="text-xs text-green-600 mt-0.5" x-show="field.condicion_campo_padre_id"
-                                   x-text="'Sub-pregunta de: ' + getParentLabel(field)"></p>
+                                   x-text="`Sub-pregunta de: ${getParentLabel(field)}`"></p>
                                 <p class="text-xs text-gray-500" x-show="field.placeholder && field.tipo !== 'separador'" x-text="field.placeholder"></p>
-                                <p class="text-xs text-gray-400 mt-1" x-show="field.ayuda && field.tipo !== 'separador'" x-text="'Ayuda: ' + field.ayuda"></p>
+                                <p class="text-xs text-gray-400 mt-1" x-show="field.ayuda && field.tipo !== 'separador'" x-text="`Ayuda: ${field.ayuda}`"></p>
                             </div>
                             <div class="flex-shrink-0 ml-2 flex flex-col space-y-1">
                                 <button @click.stop="editField(index)" class="p-1 text-gray-400 hover:text-blue-600"
@@ -185,13 +185,13 @@
                                 <div>
                                         <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
                                         <span class="text-xs text-gray-500 flex-shrink-0"
-                                              x-text="'Si: ' + opt"></span>
+                                              x-text="`Si: ${opt}`"></span>
                                         <div class="flex-1"></div>
                                         <span x-show="fieldForm.sub_preguntas[opt] && fieldForm.sub_preguntas[opt].length > 0"
                                               class="text-xs px-2 py-0.5 rounded flex-shrink-0"
                                               :class="editingIndex !== null ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50'">
                                             <i class="fas" :class="editingIndex !== null ? 'fa-check' : 'fa-clock'"></i>
-                                            <span x-text="fieldForm.sub_preguntas[opt].length + ' campo(s)'"></span>
+                                            <span x-text="`${fieldForm.sub_preguntas[opt].length} campo(s)`"></span>
                                         </span>
                                         <button type="button" @click="openSubPreguntaForm(opt)"
                                                 class="flex-shrink-0 px-2 py-1.5 text-xs text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
@@ -218,7 +218,7 @@
                                                 <div class="flex items-center justify-between bg-white rounded px-2 py-1 border border-gray-100">
                                                     <div class="flex items-center space-x-2 min-w-0">
                                                         <span class="text-xs text-gray-500 font-medium whitespace-nowrap" x-text="child.tipo.charAt(0).toUpperCase() + child.tipo.slice(1)"></span>
-                                                        <span class="text-xs text-gray-700 truncate" x-text="'\"' + child.etiqueta + '\"'"></span>
+                                                        <span class="text-xs text-gray-700 truncate" x-text="`\"${child.etiqueta}\"`"></span>
                                                     </div>
                                                     <button type="button" @click="removeChildSubPregunta(opt, childIdx)"
                                                             class="text-red-400 hover:text-red-600 flex-shrink-0 ml-2">
@@ -500,6 +500,26 @@ function formBuilder() {
             };
         },
 
+        isFieldNameAvailable(nombre, ignoredIndex = null) {
+            const normalizedName = nombre.trim();
+            return normalizedName !== '' && !this.fields.some((field, index) =>
+                index !== ignoredIndex && field.tipo !== 'separador' && field.nombre === normalizedName
+            );
+        },
+
+        validatePendingChildNames(parentName) {
+            const pendingNames = new Set([parentName]);
+            for (const children of Object.values(this.fieldForm.sub_preguntas)) {
+                for (const child of children) {
+                    if (!child.nombre || pendingNames.has(child.nombre) || !this.isFieldNameAvailable(child.nombre)) {
+                        return child.nombre || '(sin nombre)';
+                    }
+                    pendingNames.add(child.nombre);
+                }
+            }
+            return null;
+        },
+
         addField() {
             const esSeparador = this.fieldForm.tipo === 'separador';
             
@@ -510,6 +530,17 @@ function formBuilder() {
             if (esSeparador && !this.fieldForm.etiqueta) {
                 Swal.fire('Error', 'La etiqueta es obligatoria para el separador.', 'error');
                 return;
+            }
+            if (!esSeparador && !this.isFieldNameAvailable(this.fieldForm.nombre)) {
+                Swal.fire('Error', 'El nombre interno debe ser único. Podés repetir la etiqueta, pero no el nombre.', 'error');
+                return;
+            }
+            if (!esSeparador) {
+                const duplicateChildName = this.validatePendingChildNames(this.fieldForm.nombre.trim());
+                if (duplicateChildName) {
+                    Swal.fire('Error', `El nombre interno "${duplicateChildName}" está repetido.`, 'error');
+                    return;
+                }
             }
 
             // Auto-generar nombre para separadores
@@ -572,7 +603,7 @@ function formBuilder() {
                 opcionesArray.forEach(opt => { subPreguntas[opt] = []; });
                 const parentNombre = field.nombre;
                 this.fields.forEach(f => {
-                    if (f.condicion_campo_padre_id === parentNombre && f.condicion_valor) {
+                    if (f.condicion_campo_padre_id == parentNombre && f.condicion_valor) {
                         if (!subPreguntas[f.condicion_valor]) subPreguntas[f.condicion_valor] = [];
                         subPreguntas[f.condicion_valor].push({
                             tipo: f.tipo,
@@ -612,6 +643,10 @@ function formBuilder() {
                 Swal.fire('Error', 'La etiqueta es obligatoria para el separador.', 'error');
                 return;
             }
+            if (!esSeparador && !this.isFieldNameAvailable(this.fieldForm.nombre, this.editingIndex)) {
+                Swal.fire('Error', 'El nombre interno debe ser único. Podés repetir la etiqueta, pero no el nombre.', 'error');
+                return;
+            }
 
             let opciones = [];
             if (!esSeparador && ['select', 'checkbox', 'radio'].includes(this.fieldForm.tipo) && this.fieldForm.opciones_text) {
@@ -620,6 +655,7 @@ function formBuilder() {
 
             // Mantener nombre existente si es separador
             let nombre = this.fieldForm.nombre;
+            const previousName = this.fields[this.editingIndex].nombre;
             if (esSeparador) {
                 nombre = this.fields[this.editingIndex].nombre || 'seccion_1';
             }
@@ -634,6 +670,64 @@ function formBuilder() {
                 requerido: esSeparador ? false : this.fieldForm.requerido,
                 opciones: opciones,
             };
+
+            if (!esSeparador && previousName !== nombre) {
+                this.fields.forEach(field => {
+                    if (field.condicion_campo_padre_id === previousName) {
+                        field.condicion_campo_padre_id = nombre;
+                    }
+                });
+            }
+
+            if (!esSeparador && ['select', 'radio'].includes(this.fieldForm.tipo)) {
+                const parentNombre = this.fields[this.editingIndex].nombre;
+                const optsSet = new Set(opciones);
+
+                for (let i = this.fields.length - 1; i >= 0; i--) {
+                    const f = this.fields[i];
+                    if (f.condicion_campo_padre_id && f.condicion_campo_padre_id == parentNombre && f.condicion_valor && !optsSet.has(f.condicion_valor)) {
+                        this.fields.splice(i, 1);
+                    }
+                }
+
+                let insertIdx = this.editingIndex + 1;
+                while (insertIdx < this.fields.length) {
+                    const f = this.fields[insertIdx];
+                    if (f.condicion_campo_padre_id && f.condicion_campo_padre_id == parentNombre) {
+                        insertIdx++;
+                    } else {
+                        break;
+                    }
+                }
+
+                const existingNames = new Set();
+                for (const f of this.fields) {
+                    if (f.condicion_campo_padre_id && f.condicion_campo_padre_id == parentNombre && f.nombre) {
+                        existingNames.add(f.nombre);
+                    }
+                }
+
+                const newChildren = [];
+                this.fieldForm.opciones_array.forEach(opt => {
+                    (this.fieldForm.sub_preguntas[opt] || []).forEach(childData => {
+                        if (childData.nombre && !existingNames.has(childData.nombre)) {
+                            newChildren.push({
+                                tipo: childData.tipo,
+                                nombre: childData.nombre,
+                                etiqueta: childData.etiqueta,
+                                placeholder: childData.placeholder || '',
+                                ayuda: '',
+                                requerido: false,
+                                opciones: childData.opciones || [],
+                                condicion_campo_padre_id: parentNombre,
+                                condicion_valor: opt,
+                            });
+                        }
+                    });
+                });
+
+                this.fields.splice(insertIdx, 0, ...newChildren);
+            }
 
             this.cancelEdit();
         },
@@ -669,6 +763,16 @@ function formBuilder() {
                     .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
                     + '_' + Date.now().toString(36);
             }
+            if (!this.isFieldNameAvailable(nombre)) {
+                Swal.fire('Error', 'El nombre interno debe ser único. Podés repetir la etiqueta, pero no el nombre.', 'error');
+                return;
+            }
+
+            const pendingChildren = Object.values(this.fieldForm.sub_preguntas).flat();
+            if (pendingChildren.some(child => child.nombre === nombre)) {
+                Swal.fire('Error', 'El nombre interno ya fue usado por otra sub-pregunta de este campo.', 'error');
+                return;
+            }
 
             let opciones = [];
             if (['checkbox', 'radio'].includes(form.tipo) && form.opciones_text) {
@@ -699,7 +803,7 @@ function formBuilder() {
                 const descendantKeys = new Set();
                 while (insertIdx < this.fields.length) {
                     const f = this.fields[insertIdx];
-                    if (f.condicion_campo_padre_id && (f.condicion_campo_padre_id === parentKey || descendantKeys.has(f.condicion_campo_padre_id))) {
+                    if (f.condicion_campo_padre_id && (f.condicion_campo_padre_id == parentKey || descendantKeys.has(f.condicion_campo_padre_id))) {
                         const fKey = f.nombre;
                         if (fKey) descendantKeys.add(fKey);
                         insertIdx++;
@@ -756,33 +860,6 @@ function formBuilder() {
                 condicion_campo_padre: f.condicion_campo_padre_id || null,
                 condicion_valor: f.condicion_valor || null,
             }));
-
-            const allSubs = {};
-
-            if (this.editingIndex !== null) {
-                Object.assign(allSubs, this.fieldForm.sub_preguntas);
-            }
-
-            this.fields.forEach(f => {
-                if (!['select', 'radio'].includes(f.tipo)) return;
-                const parentNombre = f.nombre;
-                if (!parentNombre) return;
-                const idx = toSave.findIndex(tf => tf.nombre === parentNombre);
-                if (idx === -1) return;
-                const opciones = Array.isArray(toSave[idx].opciones) ? toSave[idx].opciones : [];
-                opciones.forEach(opt => {
-                    const children = allSubs[opt] || [];
-                    children.forEach(childData => {
-                        const childNombre = childData.nombre;
-                        if (!childNombre) return;
-                        const childIdx = toSave.findIndex(c => c.nombre === childNombre);
-                        if (childIdx !== -1) {
-                            toSave[childIdx].condicion_campo_padre = parentNombre;
-                            toSave[childIdx].condicion_valor = opt;
-                        }
-                    });
-                });
-            });
 
             fetch('<?= APP_URL ?>/formularios/guardar-campos', {
                 method: 'POST',

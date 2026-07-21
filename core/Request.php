@@ -22,7 +22,7 @@ class Request
         if (stripos($contentType, 'application/json') !== false) {
             $input = json_decode(file_get_contents('php://input'), true) ?? [];
             $this->rawBody = $input;
-            $this->body = $this->sanitizeArray($input);
+            $this->body = $input;
         } elseif ($this->getMethod() === 'POST') {
             $this->rawBody = $_POST;
             $this->body = $this->sanitizeArray($_POST);

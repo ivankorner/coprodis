@@ -146,6 +146,49 @@ class FormBuilderController extends Controller
             return;
         }
 
+        if (!is_array($fields)) {
+            $this->json(['success' => false, 'message' => 'La definición de campos es inválida.'], 422);
+            return;
+        }
+
+        // `nombre` is the stable key used by the builder to resolve a conditional
+        // parent after fields receive their database IDs. It must be unique within
+        // a form; labels, on the other hand, may be repeated freely.
+        $fieldNames = [];
+        foreach ($fields as $index => $field) {
+            if (!is_array($field)) {
+                $this->json(['success' => false, 'message' => 'La definición de un campo es inválida.'], 422);
+                return;
+            }
+            if (($field['tipo'] ?? '') === 'separador') {
+                continue;
+            }
+
+            $name = trim((string)($field['nombre'] ?? ''));
+            if ($name === '') {
+                $this->json(['success' => false, 'message' => 'Todos los campos deben tener un nombre interno.'], 422);
+                return;
+            }
+            if (isset($fieldNames[$name])) {
+                $this->json(['success' => false, 'message' => "El nombre interno '{$name}' está repetido. Usá nombres distintos aunque la etiqueta sea igual."], 422);
+                return;
+            }
+
+            $fieldNames[$name] = $index;
+        }
+
+        foreach ($fields as $field) {
+            $parentName = trim((string)($field['condicion_campo_padre'] ?? ''));
+            $conditionValue = trim((string)($field['condicion_valor'] ?? ''));
+            if ($parentName === '' && $conditionValue === '') {
+                continue;
+            }
+            if ($parentName === '' || $conditionValue === '' || !isset($fieldNames[$parentName])) {
+                $this->json(['success' => false, 'message' => 'Una sub-pregunta debe indicar un padre válido y el valor que la activa.'], 422);
+                return;
+            }
+        }
+
         $db->beginTransaction();
         try {
             $db->update('forms', [
@@ -159,10 +202,10 @@ class FormBuilderController extends Controller
             $db->update('form_fields', ['deleted_at' => date('Y-m-d H:i:s')], 'form_id = :form_id', ['form_id' => $formId]);
 
             $orden = 0;
-            $nombreToId = [];
+            $fieldIds = [];
             $seccionCounter = 0;
 
-            foreach ($fields as $field) {
+            foreach ($fields as $index => $field) {
                 $esSeparador = ($field['tipo'] ?? '') === 'separador';
 
                 if ($esSeparador) {
@@ -200,19 +243,19 @@ class FormBuilderController extends Controller
                     'condicion_valor' => $condicionValor ?: null,
                 ]);
 
-                $nombreToId[$field['nombre']] = $newId;
+                $fieldIds[$index] = $newId;
             }
 
-            foreach ($fields as $field) {
+            foreach ($fields as $index => $field) {
                 $condicionPadreRaw = $field['condicion_campo_padre'] ?? null;
-                if (!$condicionPadreRaw || !$field['condicion_valor']) continue;
-
-                $childId = $nombreToId[$field['nombre']] ?? null;
-                $parentId = $nombreToId[$condicionPadreRaw] ?? null;
-
-                if (!$parentId && is_numeric($condicionPadreRaw)) {
-                    $parentId = (int)$condicionPadreRaw;
+                $condicionValor = $field['condicion_valor'] ?? null;
+                if ($condicionPadreRaw === null || $condicionPadreRaw === '' || $condicionValor === null || $condicionValor === '') {
+                    continue;
                 }
+
+                $childId = $fieldIds[$index] ?? null;
+                $parentIndex = $fieldNames[$condicionPadreRaw] ?? null;
+                $parentId = $parentIndex !== null ? ($fieldIds[$parentIndex] ?? null) : null;
 
                 if ($childId && $parentId) {
                     $db->update('form_fields',

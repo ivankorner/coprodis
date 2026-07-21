@@ -17,7 +17,7 @@ class FormBuilderPage {
     await this.page.waitForURL(/formularios\/\d+\/editar/);
   }
 
-  async addField(tipo, etiqueta, nombre, options = {}) {
+  async fillFieldForm(tipo, etiqueta, nombre, options = {}) {
     const { placeholder, opciones, requerido } = options;
 
     await this.page.locator('select[x-model="fieldForm.tipo"]').selectOption(tipo);
@@ -47,8 +47,32 @@ class FormBuilderPage {
         await checkbox.check();
       }
     }
+  }
 
+  async addField(tipo, etiqueta, nombre, options = {}) {
+    await this.fillFieldForm(tipo, etiqueta, nombre, options);
+    await this.clickAddFieldButton();
+  }
+
+  async clickAddFieldButton() {
     await this.page.locator('button.bg-blue-600').filter({ hasText: 'Agregar Campo' }).click();
+    await this.page.waitForTimeout(300);
+  }
+
+  async addSubPregunta(optionText, tipo, etiqueta, nombre) {
+    const optionRow = this.page.locator('.flex.items-center.space-x-2.bg-gray-50.rounded-lg.p-2')
+      .filter({ hasText: `Si: ${optionText}` });
+    await optionRow.locator('button').click();
+    await this.page.waitForTimeout(300);
+
+    const miniForm = this.page.locator(`text=Nuevo campo para: ${optionText}`)
+      .locator('xpath=../..');
+
+    await miniForm.locator('select').first().selectOption(tipo);
+    await miniForm.locator('input[x-model="subPreguntaForm.etiqueta"]').fill(etiqueta);
+    await miniForm.locator('input[x-model="subPreguntaForm.nombre"]').fill(nombre);
+
+    await miniForm.locator('button.bg-green-600').click();
     await this.page.waitForTimeout(300);
   }
 

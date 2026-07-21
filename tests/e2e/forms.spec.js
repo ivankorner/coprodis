@@ -48,6 +48,48 @@ test.describe('Formularios dinámicos', () => {
     await expect(page.locator('h3:has-text("Encuesta Test")').first()).toBeVisible();
   });
 
+  test('Radio button con sub-pregunta preserva enlace al guardar', async ({ page }) => {
+    const forms = new FormBuilderPage(page);
+    await forms.createForm('Test Radio Subpregunta', 'Verificar enlace padre-hijo');
+
+    await forms.fillFieldForm('radio', 'Género', 'genero', {
+      opciones: ['Masculino', 'Femenino', 'Otro'],
+    });
+
+    await forms.addSubPregunta('Masculino', 'texto', 'Especificar Masculino', 'especificar_masculino');
+    await forms.addSubPregunta('Otro', 'textarea', 'Especificar Otro', 'especificar_otro');
+
+    await forms.clickAddFieldButton();
+    await forms.saveFields();
+
+    await expect(page.locator('.border-l-4.border-green-400')).toHaveCount(2);
+    await expect(page.locator('span:has-text("Sub-pregunta")').first()).toBeVisible();
+    await expect(page.locator('text=Sub-pregunta de: Género').first()).toBeVisible();
+    await expect(page.locator('p:has-text("Género")').first()).toBeVisible();
+  });
+
+  test('Dos radios con la misma opción mantienen sus sub-preguntas separadas', async ({ page }) => {
+    const forms = new FormBuilderPage(page);
+    await forms.createForm('Test Radios Independientes', 'Evitar cruces entre respuestas Sí/No');
+
+    await forms.fillFieldForm('radio', '¿Tiene agua potable?', 'tiene_agua', {
+      opciones: ['Sí', 'No'],
+    });
+    await forms.addSubPregunta('Sí', 'textarea', 'Proveedor', 'proveedor_agua');
+    await forms.clickAddFieldButton();
+
+    await forms.fillFieldForm('radio', '¿Tiene energía eléctrica?', 'tiene_energia', {
+      opciones: ['Sí', 'No'],
+    });
+    await forms.addSubPregunta('Sí', 'textarea', 'Proveedor', 'proveedor_energia');
+    await forms.clickAddFieldButton();
+    await forms.saveFields();
+
+    await expect(page.locator('.border-l-4.border-green-400')).toHaveCount(2);
+    await expect(page.locator('p.text-green-600', { hasText: 'Sub-pregunta de: ¿Tiene agua potable?' })).toHaveCount(1);
+    await expect(page.locator('p.text-green-600', { hasText: 'Sub-pregunta de: ¿Tiene energía eléctrica?' })).toHaveCount(1);
+  });
+
   test('Eliminar formulario', async ({ page }) => {
     const forms = new FormBuilderPage(page);
     await forms.createForm('Form para eliminar', 'Será eliminado');
