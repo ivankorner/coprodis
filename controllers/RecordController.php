@@ -25,6 +25,11 @@ class RecordController extends Controller
         $estado = $request->query('estado');
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+        $perPage = (int)($request->query('per_page', PAGINATION_LIMIT));
+        $allowedPerPage = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowedPerPage)) {
+            $perPage = PAGINATION_LIMIT;
+        }
 
         $userRole = Session::userRole();
         $userId = Session::userId();
@@ -60,8 +65,7 @@ class RecordController extends Controller
         }
 
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) . ' AND r.deleted_at IS NULL' : 'WHERE r.deleted_at IS NULL';
-        $limit = PAGINATION_LIMIT;
-        $offset = ($page - 1) * $limit;
+        $offset = ($page - 1) * $perPage;
 
         $records = $db->fetchAll(
             "SELECT r.*, f.titulo as form_titulo,
@@ -82,7 +86,7 @@ class RecordController extends Controller
              JOIN users u ON r.user_id = u.id
              {$whereClause}
              ORDER BY r.created_at DESC
-             LIMIT {$limit} OFFSET {$offset}",
+             LIMIT {$perPage} OFFSET {$offset}",
             $params
         );
 
@@ -99,7 +103,8 @@ class RecordController extends Controller
             'forms' => $forms,
             'total' => $total,
             'page' => $page,
-            'totalPages' => (int)ceil($total / $limit),
+            'totalPages' => (int)ceil($total / $perPage),
+            'perPage' => $perPage,
             'search' => $search,
             'filtroForm' => $formId,
             'filtroEstado' => $estado,

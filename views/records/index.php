@@ -158,17 +158,83 @@
             </table>
         </div>
 
-        <?php if ($totalPages > 1): ?>
-        <div class="px-4 sm:px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-            <p class="text-sm text-gray-500">Página <?= $page ?> de <?= $totalPages ?></p>
-            <div class="flex space-x-2">
-                <?php if ($page > 1): ?>
-                    <a href="?page=<?= $page - 1 ?>&search=<?= $search ?? '' ?>&form_id=<?= $filtroForm ?? '' ?>&estado=<?= $filtroEstado ?? '' ?>"
-                       class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Anterior</a>
-                <?php endif; ?>
-                <?php if ($page < $totalPages): ?>
-                    <a href="?page=<?= $page + 1 ?>&search=<?= $search ?? '' ?>&form_id=<?= $filtroForm ?? '' ?>&estado=<?= $filtroEstado ?? '' ?>"
-                       class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Siguiente</a>
+        <?php if ($totalPages > 0): ?>
+        <div class="px-4 sm:px-6 py-3 border-t border-gray-200">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Mostrar</span>
+                    <select onchange="location.href='?page=1&search=<?= urlencode($search ?? '') ?>&form_id=<?= $filtroForm ?? '' ?>&estado=<?= $filtroEstado ?? '' ?>&fecha_desde=<?= urlencode($filtroFechaDesde ?? '') ?>&fecha_hasta=<?= urlencode($filtroFechaHasta ?? '') ?>&per_page='+this.value"
+                            class="px-2 py-1 border border-gray-300 rounded-lg text-sm bg-white">
+                        <?php foreach ([10, 25, 50, 100] as $opt): ?>
+                            <option value="<?= $opt ?>" <?= ($perPage ?? PAGINATION_LIMIT) == $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span>de <?= $total ?> registros</span>
+                </div>
+
+                <?php if ($totalPages > 1): ?>
+                <nav class="flex items-center gap-1">
+                    <?php
+                    $search = $search ?? '';
+                    $filtroForm = $filtroForm ?? '';
+                    $filtroEstado = $filtroEstado ?? '';
+                    $filtroFechaDesde = $filtroFechaDesde ?? '';
+                    $filtroFechaHasta = $filtroFechaHasta ?? '';
+                    $perPage = $perPage ?? PAGINATION_LIMIT;
+                    $qp = function($p) use ($search, $filtroForm, $filtroEstado, $filtroFechaDesde, $filtroFechaHasta, $perPage) {
+                        return '?page=' . $p
+                            . '&search=' . urlencode($search)
+                            . '&form_id=' . $filtroForm
+                            . '&estado=' . $filtroEstado
+                            . '&fecha_desde=' . urlencode($filtroFechaDesde)
+                            . '&fecha_hasta=' . urlencode($filtroFechaHasta)
+                            . '&per_page=' . $perPage;
+                    };
+                    ?>
+
+                    <?php if ($page > 1): ?>
+                        <a href="<?= $qp(1) ?>" class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="<?= $qp($page - 1) ?>" class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    <?php endif; ?>
+
+                    <?php
+                    $start = max(1, $page - 2);
+                    $end = min($totalPages, $page + 2);
+                    if ($start > 1): ?>
+                        <a href="<?= $qp(1) ?>" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">1</a>
+                        <?php if ($start > 2): ?>
+                            <span class="px-2 py-1.5 text-sm text-gray-400">...</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php for ($i = $start; $i <= $end; $i++): ?>
+                        <?php if ($i == $page): ?>
+                            <span class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg font-medium"><?= $i ?></span>
+                        <?php else: ?>
+                            <a href="<?= $qp($i) ?>" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600"><?= $i ?></a>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+
+                    <?php if ($end < $totalPages): ?>
+                        <?php if ($end < $totalPages - 1): ?>
+                            <span class="px-2 py-1.5 text-sm text-gray-400">...</span>
+                        <?php endif; ?>
+                        <a href="<?= $qp($totalPages) ?>" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600"><?= $totalPages ?></a>
+                    <?php endif; ?>
+
+                    <?php if ($page < $totalPages): ?>
+                        <a href="<?= $qp($page + 1) ?>" class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                        <a href="<?= $qp($totalPages) ?>" class="px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    <?php endif; ?>
+                </nav>
                 <?php endif; ?>
             </div>
         </div>
