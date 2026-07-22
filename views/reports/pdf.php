@@ -44,15 +44,19 @@
 </table>
 <?php endif; ?>
 
-<?php if (isset($form)): ?>
+<?php if (isset($form) && isset($fieldLabels)): ?>
 <h2>Formulario: <?= $form->titulo ?></h2>
-<?php if (isset($fields)): ?>
+<?php if (!empty($recordsTableHtml)): ?>
 <table>
-    <tr><th>Campo</th><th>Valor</th></tr>
-    <?php foreach ($fields as $ff): ?>
-    <tr><td><?= $ff->etiqueta ?? $ff->nombre ?></td><td><?= $ff->valor ?? '' ?></td></tr>
+    <tr><th>#</th>
+    <?php foreach ($fieldLabels as $label): ?>
+        <th><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></th>
     <?php endforeach; ?>
+    </tr>
+    <?= $recordsTableHtml ?>
 </table>
+<?php else: ?>
+<p style="text-align:center;color:#888;font-size:9pt">No hay registros para este formulario.</p>
 <?php endif; ?>
 <?php endif; ?>
 

@@ -57,6 +57,14 @@ class Database
         return $result->fetchAll();
     }
 
+    public function fetchYield(string $sql, array $params = []): \Generator
+    {
+        $stmt = $this->query($sql, $params);
+        while ($row = $stmt->fetch()) {
+            yield $row;
+        }
+    }
+
     public function insert(string $table, array $data): int
     {
         $columns = implode(', ', array_keys($data));

@@ -75,6 +75,7 @@ class ExportService
 
     public static function toPdf(string $view, array $data, string $filename = null): string
     {
+        $previous = ini_set('memory_limit', '2048M');
         require_once BASE_PATH . '/vendor/autoload.php';
 
         $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
@@ -101,6 +102,7 @@ class ExportService
         $filepath = BASE_PATH . "/storage/exports/{$filename}";
         $pdf->Output($filepath, 'F');
 
+        ini_set('memory_limit', $previous);
         return $filepath;
     }
 

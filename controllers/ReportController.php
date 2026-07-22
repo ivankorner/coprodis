@@ -406,44 +406,123 @@ class ReportController extends Controller
 
         } elseif ($tipo === 'pdf-form') {
             $formId = (int)$request->get('form_id');
-            $form = $db->fetch("SELECT * FROM forms WHERE id = :id", ['id' => $formId]);
+            $form = $db->fetch("SELECT * FROM forms WHERE id = :id AND deleted_at IS NULL", ['id' => $formId]);
+            if (!$form) {
+                $this->redirectWith(APP_URL . '/reportes', 'error', 'Formulario no encontrado.');
+                return;
+            }
+
             $fields = $db->fetchAll(
-                "SELECT ff.*, rd.valor FROM form_fields ff
-                 LEFT JOIN record_data rd ON ff.id = rd.field_id
-                 WHERE ff.form_id = :fid AND ff.deleted_at IS NULL
-                 ORDER BY ff.orden",
+                "SELECT * FROM form_fields WHERE form_id = :fid AND deleted_at IS NULL ORDER BY orden",
                 ['fid' => $formId]
             );
+
+            $fieldLabels = array_map(fn($f) => $f->etiqueta, $fields);
+            $fieldIds = array_map(fn($f) => $f->id, $fields);
+
+            $recordsTableHtml = '';
+            $offset = 0;
+            $chunkSize = 500;
+
+            while (true) {
+                $chunk = $db->fetchAll(
+                    "SELECT id, created_at FROM records WHERE form_id = :fid AND deleted_at IS NULL ORDER BY created_at DESC LIMIT " . (int)$chunkSize . " OFFSET " . (int)$offset,
+                    ['fid' => $formId]
+                );
+                if (empty($chunk)) break;
+
+                $chunkIds = array_map(fn($r) => $r->id, $chunk);
+                $placeholders = implode(',', array_fill(0, count($chunkIds), '?'));
+
+                $chunkData = $db->fetchAll(
+                    "SELECT record_id, field_id, valor FROM record_data WHERE record_id IN ($placeholders)",
+                    $chunkIds
+                );
+
+                $dataMap = [];
+                foreach ($chunkData as $d) {
+                    $dataMap[$d->record_id][$d->field_id] = $d->valor;
+                }
+                unset($chunkData);
+
+                foreach ($chunk as $record) {
+                    $recordsTableHtml .= '<tr><td>' . $record->id . '</td>';
+                    foreach ($fieldIds as $fid) {
+                        $recordsTableHtml .= '<td>' . htmlspecialchars($dataMap[$record->id][$fid] ?? '', ENT_QUOTES, 'UTF-8') . '</td>';
+                    }
+                    $recordsTableHtml .= '</tr>';
+                }
+                unset($dataMap, $chunk);
+
+                $offset += $chunkSize;
+            }
+
             $data = [
                 'title' => "Reporte: {$form->titulo}",
                 'form' => $form,
-                'fields' => $fields,
+                'fieldLabels' => $fieldLabels,
+                'fieldIds' => $fieldIds,
+                'recordsTableHtml' => $recordsTableHtml,
             ];
             $filepath = ExportService::toPdf('reports.pdf', $data);
             Response::download($filepath);
 
         } elseif ($tipo === 'excel-form') {
             $formId = (int)$request->get('form_id');
-            $form = $db->fetch("SELECT * FROM forms WHERE id = :id", ['id' => $formId]);
+            $form = $db->fetch("SELECT * FROM forms WHERE id = :id AND deleted_at IS NULL", ['id' => $formId]);
+            if (!$form) {
+                $this->redirectWith(APP_URL . '/reportes', 'error', 'Formulario no encontrado.');
+                return;
+            }
+
             $fields = $db->fetchAll(
-                "SELECT ff.*, rd.valor FROM form_fields ff
-                 LEFT JOIN record_data rd ON ff.id = rd.field_id
-                 WHERE ff.form_id = :fid AND ff.deleted_at IS NULL ORDER BY ff.orden",
+                "SELECT * FROM form_fields WHERE form_id = :fid AND deleted_at IS NULL ORDER BY orden",
                 ['fid' => $formId]
             );
-            $headers = ['ID', 'Formulario'];
-            $fieldLabels = [];
+
+            $headers = ['ID'];
+            $fieldIds = [];
             foreach ($fields as $f) {
-                if (!isset($fieldLabels[$f->id])) {
-                    $headers[] = $f->etiqueta;
-                    $fieldLabels[$f->id] = $f->etiqueta;
+                $headers[] = $f->etiqueta;
+                $fieldIds[] = $f->id;
+            }
+
+            $excelData = [];
+            $offset = 0;
+            $chunkSize = 500;
+
+            while (true) {
+                $chunk = $db->fetchAll(
+                    "SELECT id FROM records WHERE form_id = :fid AND deleted_at IS NULL ORDER BY created_at DESC LIMIT " . (int)$chunkSize . " OFFSET " . (int)$offset,
+                    ['fid' => $formId]
+                );
+                if (empty($chunk)) break;
+
+                $chunkIds = array_map(fn($r) => $r->id, $chunk);
+                $placeholders = implode(',', array_fill(0, count($chunkIds), '?'));
+
+                $chunkData = $db->fetchAll(
+                    "SELECT record_id, field_id, valor FROM record_data WHERE record_id IN ($placeholders)",
+                    $chunkIds
+                );
+
+                $dataMap = [];
+                foreach ($chunkData as $d) {
+                    $dataMap[$d->record_id][$d->field_id] = $d->valor;
                 }
+
+                foreach ($chunk as $r) {
+                    $row = [$r->id];
+                    foreach ($fieldIds as $fid) {
+                        $row[] = $dataMap[$r->id][$fid] ?? '';
+                    }
+                    $excelData[] = $row;
+                }
+
+                $offset += $chunkSize;
             }
-            $data = [[1, $form->titulo]];
-            foreach ($fields as $f) {
-                $data[0][] = $f->valor ?? '';
-            }
-            $filepath = ExportService::toExcel("reporte_{$form->titulo}", $headers, $data);
+
+            $filepath = ExportService::toExcel("reporte_{$form->titulo}", $headers, $excelData);
             Response::download($filepath);
         }
 
