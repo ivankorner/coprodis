@@ -445,6 +445,20 @@ class RecordController extends Controller
             error_log("AuditService error: " . $e->getMessage());
         }
 
+        try {
+            $creator = $db->fetch(
+                "SELECT nombre, apellido FROM users WHERE id = :id",
+                ['id' => $userId]
+            );
+            $nombreCompleto = trim("{$creator->nombre} {$creator->apellido}");
+            $mensaje = "{$nombreCompleto} creó un registro en: {$form->titulo}";
+
+            NotificationService::createForRole('super_usuario', 'Nuevo registro', $mensaje, 'success');
+            NotificationService::createForRole('administrador', 'Nuevo registro', $mensaje, 'success');
+        } catch (\Throwable $e) {
+            error_log("NotificationService error: " . $e->getMessage());
+        }
+
         $isAjax = $request->isAjax();
         if ($isAjax) {
             ob_end_clean();
