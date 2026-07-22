@@ -16,16 +16,40 @@ class ReportController extends Controller
         $this->requireAuth();
         $db = Database::getInstance();
 
+        $formId = $request->query('form_id');
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+        $days = (int)($request->query('days', 30));
+        $days = min(max($days, 1), 365);
+
+        $recordWhere = 'WHERE r.deleted_at IS NULL';
+        $recordParams = [];
+        if ($formId) {
+            $recordWhere .= ' AND r.form_id = :fid';
+            $recordParams['fid'] = (int)$formId;
+        }
+        if ($fechaDesde) {
+            $recordWhere .= ' AND r.created_at >= :fd';
+            $recordParams['fd'] = $fechaDesde . ' 00:00:00';
+        }
+        if ($fechaHasta) {
+            $recordWhere .= ' AND r.created_at <= :fh';
+            $recordParams['fh'] = $fechaHasta . ' 23:59:59';
+        }
+
+        $form = null;
+        if ($formId) {
+            $form = $db->fetch("SELECT id, titulo FROM forms WHERE id = :id AND deleted_at IS NULL", ['id' => (int)$formId]);
+        }
 
         $stats = [
-            'total_registros' => (int)$db->fetch("SELECT COUNT(*) as t FROM records WHERE deleted_at IS NULL")->t,
-            'hoy' => (int)$db->fetch("SELECT COUNT(*) as t FROM records WHERE DATE(created_at) = CURDATE() AND deleted_at IS NULL")->t,
-            'semana' => (int)$db->fetch("SELECT COUNT(*) as t FROM records WHERE YEARWEEK(created_at,1) = YEARWEEK(CURDATE(),1) AND deleted_at IS NULL")->t,
-            'mes' => (int)$db->fetch("SELECT COUNT(*) as t FROM records WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) AND deleted_at IS NULL")->t,
+            'total_registros' => (int)$db->fetch("SELECT COUNT(*) as t FROM records r {$recordWhere}", $recordParams)->t,
+            'hoy' => (int)$db->fetch("SELECT COUNT(*) as t FROM records r {$recordWhere} AND DATE(r.created_at) = CURDATE()", $recordParams)->t,
+            'semana' => (int)$db->fetch("SELECT COUNT(*) as t FROM records r {$recordWhere} AND YEARWEEK(r.created_at,1) = YEARWEEK(CURDATE(),1)", $recordParams)->t,
+            'mes' => (int)$db->fetch("SELECT COUNT(*) as t FROM records r {$recordWhere} AND MONTH(r.created_at) = MONTH(CURDATE()) AND YEAR(r.created_at) = YEAR(CURDATE())", $recordParams)->t,
             'formularios_activos' => (int)$db->fetch("SELECT COUNT(*) as t FROM forms WHERE estado = 'publicado' AND deleted_at IS NULL")->t,
             'usuarios_activos' => (int)$db->fetch("SELECT COUNT(*) as t FROM users WHERE estado = 'activo' AND deleted_at IS NULL")->t,
+            'form_nombre' => $form ? $form->titulo : null,
         ];
 
         $formsStats = $db->fetchAll(
@@ -45,26 +69,41 @@ class ReportController extends Controller
              GROUP BY f.id ORDER BY total DESC"
         );
 
+        $timelineWhere = $recordWhere;
+        $timelineParams = $recordParams;
+        if ($fechaDesde) {
+            $timelineWhere .= ' AND r.created_at >= :tl_fd';
+            $timelineParams['tl_fd'] = $fechaDesde . ' 00:00:00';
+        } else {
+            $timelineWhere .= ' AND r.created_at >= DATE_SUB(CURDATE(), INTERVAL :tl_days DAY)';
+            $timelineParams['tl_days'] = $days;
+        }
+
         $timelineData = $db->fetchAll(
-            "SELECT DATE(created_at) as fecha, COUNT(*) as total
-             FROM records
-             WHERE deleted_at IS NULL
-               AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-             GROUP BY DATE(created_at)
-             ORDER BY fecha ASC"
+            "SELECT DATE(r.created_at) as fecha, COUNT(*) as total
+             FROM records r {$timelineWhere}
+             GROUP BY DATE(r.created_at)
+             ORDER BY fecha ASC",
+            $timelineParams
         );
 
         $topOperators = $db->fetchAll(
             "SELECT u.id, u.apellido, u.nombre, u.email, COUNT(r.id) as total
              FROM users u
              JOIN records r ON u.id = r.user_id AND r.deleted_at IS NULL
+             {$recordWhere}
              GROUP BY u.id
-             ORDER BY total DESC LIMIT 5"
+             ORDER BY total DESC LIMIT 5",
+            $recordParams
         );
 
         $favorites = $db->fetchAll(
             "SELECT * FROM report_favorites WHERE user_id = :uid ORDER BY created_at DESC",
             ['uid' => Session::userId()]
+        );
+
+        $forms = $db->fetchAll(
+            "SELECT id, titulo FROM forms WHERE deleted_at IS NULL ORDER BY titulo"
         );
 
         $this->view('reports.index', [
@@ -74,6 +113,10 @@ class ReportController extends Controller
             'timelineData' => $timelineData,
             'topOperators' => $topOperators,
             'favorites' => $favorites,
+            'forms' => $forms,
+            'formId' => $formId,
+            'form' => $form,
+            'days' => $days,
             'fechaDesde' => $fechaDesde,
             'fechaHasta' => $fechaHasta,
         ]);
