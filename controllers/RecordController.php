@@ -32,16 +32,8 @@ class RecordController extends Controller
             $perPage = PAGINATION_LIMIT;
         }
 
-        $userRole = Session::userRole();
-        $userId = Session::userId();
-
         $where = [];
         $params = [];
-
-        if ($userRole === 'usuario') {
-            $where[] = 'r.user_id = :user_id';
-            $params['user_id'] = $userId;
-        }
 
         if ($search) {
             $where[] = '(r.id = :search_id OR f.titulo LIKE :search)';
@@ -133,16 +125,8 @@ class RecordController extends Controller
             $perPage = PAGINATION_LIMIT;
         }
 
-        $userRole = Session::userRole();
-        $userId = Session::userId();
-
         $where = [];
         $params = [];
-
-        if ($userRole === 'usuario') {
-            $where[] = 'r.user_id = :user_id';
-            $params['user_id'] = $userId;
-        }
 
         if ($formId && $formId !== 'todos') {
             $where[] = 'r.form_id = :form_id';
@@ -491,11 +475,6 @@ class RecordController extends Controller
             $this->redirectWith(APP_URL . '/registros', 'error', 'Registro no encontrado.');
         }
 
-        // Check permission
-        if (Session::userRole() === 'usuario' && $record->user_id !== Session::userId()) {
-            $this->redirectWith(APP_URL . '/registros', 'error', 'No tienes permiso para ver este registro.');
-        }
-
         $fields = $db->fetchAll(
             "SELECT ff.*, rd.valor
              FROM form_fields ff
@@ -540,10 +519,6 @@ class RecordController extends Controller
             $this->redirectWith(APP_URL . '/registros', 'error', 'Registro no encontrado.');
         }
 
-        if (Session::userRole() === 'usuario' && $record->user_id !== Session::userId()) {
-            $this->redirectWith(APP_URL . '/registros', 'error', 'No tienes permiso para editar este registro.');
-        }
-
         $fields = $db->fetchAll(
             "SELECT ff.*, rd.valor
              FROM form_fields ff
@@ -570,10 +545,6 @@ class RecordController extends Controller
 
         if (!$record) {
             $this->redirectWith(APP_URL . '/registros', 'error', 'Registro no encontrado.');
-        }
-
-        if (Session::userRole() === 'usuario' && $record->user_id !== $userId) {
-            $this->redirectWith(APP_URL . '/registros', 'error', 'No tienes permiso para editar este registro.');
         }
 
         $fields = $db->fetchAll(
