@@ -174,9 +174,15 @@
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open"
                                     class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                                <?php if (!empty($currentUser->avatar)): ?>
+                                <img src="<?= APP_URL ?>/<?= $currentUser->avatar ?>"
+                                     alt="Foto de perfil"
+                                     class="w-8 h-8 rounded-full object-cover border border-gray-300">
+                                <?php else: ?>
                                 <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
                                     <?= strtoupper(substr($currentUser->nombre ?? 'U', 0, 1)) . strtoupper(substr($currentUser->apellido ?? 'U', 0, 1)) ?>
                                 </div>
+                                <?php endif; ?>
                                 <span class="hidden sm:block text-sm font-medium">
                                     <?= ($currentUser->nombre ?? '') . ' ' . ($currentUser->apellido ?? '') ?>
                                 </span>

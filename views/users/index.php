@@ -55,9 +55,15 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 sm:px-6 py-4">
                             <div class="flex items-center space-x-3">
+                                <?php if (!empty($u->avatar)): ?>
+                                <img src="<?= APP_URL ?>/<?= $u->avatar ?>"
+                                     alt="Foto de perfil"
+                                     class="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                                <?php else: ?>
                                 <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <span class="text-sm font-medium text-blue-600"><?= strtoupper(substr($u->nombre, 0, 1) . substr($u->apellido, 0, 1)) ?></span>
                                 </div>
+                                <?php endif; ?>
                                 <div>
                                     <p class="text-sm font-medium text-gray-900"><?= $u->apellido . ', ' . $u->nombre ?></p>
                                     <p class="text-xs text-gray-500">DNI: <?= $u->dni ?></p>

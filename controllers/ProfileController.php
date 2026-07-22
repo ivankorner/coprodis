@@ -9,6 +9,7 @@ use App\Core\Session;
 use App\Helpers\Validator;
 use App\Helpers\SecurityHelper;
 use App\Services\AuditService;
+use App\Services\FileUploadService;
 
 class ProfileController extends Controller
 {
@@ -34,7 +35,34 @@ class ProfileController extends Controller
         $data = $request->only(['apellido', 'nombre', 'telefono', 'localidad']);
 
         $db = Database::getInstance();
+        $uploadService = new FileUploadService();
+
+        if ($request->hasFile('avatar')) {
+            $result = $uploadService->uploadImage($request->file('avatar'), 'images/avatars');
+            if ($result['success']) {
+                $current = $db->fetch("SELECT avatar FROM users WHERE id = :id", ['id' => $userId]);
+                if (!empty($current->avatar)) {
+                    $uploadService->delete($current->avatar);
+                }
+                $data['avatar'] = $result['path'];
+            } else {
+                $this->redirectWith(APP_URL . '/perfil', 'error', $result['message']);
+            }
+        } elseif ($request->has('_remove_avatar')) {
+            $current = $db->fetch("SELECT avatar FROM users WHERE id = :id", ['id' => $userId]);
+            if (!empty($current->avatar)) {
+                $uploadService->delete($current->avatar);
+            }
+            $data['avatar'] = null;
+        }
+
         $db->update('users', $data, 'id = :id', ['id' => $userId]);
+
+        $user = $db->fetch(
+            "SELECT u.*, r.nombre as rol_nombre FROM users u JOIN roles r ON u.rol_id = r.id WHERE u.id = :id",
+            ['id' => $userId]
+        );
+        Session::set('user_data', $user);
 
         AuditService::register('actualizar_perfil', 'perfil', 'Perfil actualizado', null, 'info', $data, 'user', $userId);
 
