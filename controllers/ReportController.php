@@ -311,10 +311,13 @@ class ReportController extends Controller
             ['uid' => Session::userId()]
         );
 
+        $groupedAnalytics = $this->groupAnalytics($fieldAnalytics);
+
         $this->view('reports.form', [
             'form' => $form,
             'fields' => $fields,
             'fieldAnalytics' => $fieldAnalytics,
+            'groupedAnalytics' => $groupedAnalytics,
             'totalRecords' => $totalRecords,
             'fechaDesde' => $fechaDesde,
             'fechaHasta' => $fechaHasta,
@@ -571,5 +574,27 @@ class ReportController extends Controller
         if ($from) $p['rfd'] = $from . ' 00:00:00';
         if ($to) $p['rfh'] = $to . ' 23:59:59';
         return $p;
+    }
+
+    private function groupAnalytics(array $fieldAnalytics): array
+    {
+        $groups = [
+            'numericos'   => ['label' => 'Campos Numéricos', 'icon' => 'fa-calculator', 'types' => ['numero', 'moneda', 'porcentaje'], 'color' => 'blue'],
+            'selecciones' => ['label' => 'Selecciones',       'icon' => 'fa-list',       'types' => ['select', 'radio'],          'color' => 'purple'],
+            'checkboxes'  => ['label' => 'Checkboxes',        'icon' => 'fa-check-square','types' => ['checkbox'],                  'color' => 'green'],
+            'fechas'      => ['label' => 'Fechas',            'icon' => 'fa-calendar',    'types' => ['fecha'],                     'color' => 'indigo'],
+            'horas'       => ['label' => 'Horas',             'icon' => 'fa-clock',       'types' => ['hora'],                      'color' => 'amber'],
+            'gps'         => ['label' => 'Ubicaciones',       'icon' => 'fa-map-marker-alt','types' => ['gps'],                      'color' => 'red'],
+        ];
+
+        $result = [];
+        foreach ($groups as $key => $group) {
+            $fields = array_filter($fieldAnalytics, fn($fa) => in_array($fa['type'], $group['types']));
+            if (!empty($fields)) {
+                $result[$key] = $group;
+                $result[$key]['fields'] = array_values($fields);
+            }
+        }
+        return $result;
     }
 }
