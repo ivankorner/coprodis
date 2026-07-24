@@ -138,13 +138,99 @@ class ReportController extends Controller
             ['fid' => $formId]
         );
 
+        $filterableTypes = ['select', 'radio', 'checkbox', 'numero', 'moneda', 'porcentaje'];
+
+        $excludeLabels = ['dni', 'cuil', 'teléfono', 'telefono', 'celular'];
+        $filterableFields = array_filter($fields, function($f) use ($filterableTypes, $excludeLabels) {
+            if (!in_array($f->tipo, $filterableTypes)) return false;
+            if (in_array($f->tipo, ['numero', 'moneda', 'porcentaje'])) {
+                $label = mb_strtolower($f->etiqueta);
+                foreach ($excludeLabels as $ex) {
+                    if (str_contains($label, $ex)) return false;
+                }
+            }
+            return true;
+        });
+
+        $fieldOptions = [];
+        foreach ($filterableFields as $field) {
+            if (in_array($field->tipo, ['select', 'radio', 'checkbox'])) {
+                $opts = $db->fetchAll(
+                    "SELECT DISTINCT rd.valor FROM record_data rd
+                     JOIN records r ON rd.record_id = r.id
+                     WHERE rd.field_id = :fid AND r.deleted_at IS NULL
+                     AND rd.valor IS NOT NULL AND rd.valor != ''
+                     ORDER BY rd.valor",
+                    ['fid' => $field->id]
+                );
+                $fieldOptions[$field->id] = array_map(fn($o) => $o->valor, $opts);
+            }
+        }
+
         $fechaDesde = $request->query('fecha_desde');
         $fechaHasta = $request->query('fecha_hasta');
+
+        $fieldFilters = [];
+        foreach ($filterableFields as $field) {
+            $fid = $field->id;
+            if (in_array($field->tipo, ['select', 'radio', 'checkbox'])) {
+                $val = $request->query('f_' . $fid);
+                if ($val !== null && $val !== '') {
+                    $fieldFilters[$fid] = ['type' => 'eq', 'value' => $val];
+                }
+            } elseif (in_array($field->tipo, ['numero', 'moneda', 'porcentaje'])) {
+                $min = $request->query('f_' . $fid . '_min');
+                $max = $request->query('f_' . $fid . '_max');
+                if (($min !== null && $min !== '') || ($max !== null && $max !== '')) {
+                    $fieldFilters[$fid] = ['type' => 'range', 'min' => $min, 'max' => $max];
+                }
+            }
+        }
 
         $where = 'WHERE r.form_id = :fid AND r.deleted_at IS NULL';
         $params = ['fid' => $formId];
         if ($fechaDesde) { $where .= ' AND r.created_at >= :fd'; $params['fd'] = $fechaDesde . ' 00:00:00'; }
         if ($fechaHasta) { $where .= ' AND r.created_at <= :fh'; $params['fh'] = $fechaHasta . ' 23:59:59'; }
+
+        $fieldFilterWhere = '';
+        $fieldFilterParams = [];
+        if (!empty($fieldFilters)) {
+            $ffIdx = 0;
+            foreach ($fieldFilters as $fid => $filter) {
+                $idx = $ffIdx++;
+                if ($filter['type'] === 'eq') {
+                    $fieldFilterWhere .= " AND EXISTS (
+                        SELECT 1 FROM record_data rd_ff{$idx}
+                        WHERE rd_ff{$idx}.record_id = r.id
+                        AND rd_ff{$idx}.field_id = :ff_fid{$idx}
+                        AND rd_ff{$idx}.valor = :ff_val{$idx}
+                    )";
+                    $fieldFilterParams["ff_fid{$idx}"] = $fid;
+                    $fieldFilterParams["ff_val{$idx}"] = $filter['value'];
+                } elseif ($filter['type'] === 'range') {
+                    $rangeParts = [];
+                    if ($filter['min'] !== null && $filter['min'] !== '') {
+                        $rangeParts[] = "CAST(rd_ff{$idx}.valor AS DECIMAL(14,2)) >= :ff_min{$idx}";
+                        $fieldFilterParams["ff_min{$idx}"] = (float)$filter['min'];
+                    }
+                    if ($filter['max'] !== null && $filter['max'] !== '') {
+                        $rangeParts[] = "CAST(rd_ff{$idx}.valor AS DECIMAL(14,2)) <= :ff_max{$idx}";
+                        $fieldFilterParams["ff_max{$idx}"] = (float)$filter['max'];
+                    }
+                    if (!empty($rangeParts)) {
+                        $fieldFilterWhere .= " AND EXISTS (
+                            SELECT 1 FROM record_data rd_ff{$idx}
+                            WHERE rd_ff{$idx}.record_id = r.id
+                            AND rd_ff{$idx}.field_id = :ff_fid{$idx}
+                            AND " . implode(' AND ', $rangeParts) . "
+                        )";
+                        $fieldFilterParams["ff_fid{$idx}"] = $fid;
+                    }
+                }
+            }
+        }
+        $where .= $fieldFilterWhere;
+        $params = array_merge($params, $fieldFilterParams);
 
         $totalRecords = (int)$db->fetch(
             "SELECT COUNT(*) as t FROM records r {$where}", $params
@@ -166,8 +252,8 @@ class ReportController extends Controller
                                 COUNT(rd.valor) as filled
                          FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}",
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $analytics['data'] = [
                         'avg' => $agg->avg ? round((float)$agg->avg, 2) : null,
@@ -181,9 +267,9 @@ class ReportController extends Controller
                         "SELECT rd.valor, COUNT(*) as total
                          FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          GROUP BY rd.valor ORDER BY total DESC LIMIT 20",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $analytics['data']['distribution'] = $buckets;
                     break;
@@ -194,9 +280,9 @@ class ReportController extends Controller
                         "SELECT rd.valor, COUNT(*) as total
                          FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          GROUP BY rd.valor ORDER BY total DESC",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $analytics['data']['distribution'] = $distribution;
                     $analytics['data']['filled'] = array_sum(array_map(fn($d) => (int)$d->total, $distribution));
@@ -206,9 +292,9 @@ class ReportController extends Controller
                     $raw = $db->fetchAll(
                         "SELECT rd.valor FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $freq = [];
                     foreach ($raw as $r) {
@@ -229,10 +315,10 @@ class ReportController extends Controller
                         "SELECT DATE_FORMAT(rd.valor, '%Y-%m') as mes, COUNT(*) as total
                          FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''
                          GROUP BY mes ORDER BY mes",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $analytics['data']['months'] = $months;
                     $analytics['data']['filled'] = array_sum(array_map(fn($m) => (int)$m->total, $months));
@@ -243,10 +329,10 @@ class ReportController extends Controller
                         "SELECT HOUR(rd.valor) as hora, COUNT(*) as total
                          FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''
                          GROUP BY hora ORDER BY hora",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $analytics['data']['hours'] = $hours;
                     $analytics['data']['filled'] = array_sum(array_map(fn($h) => (int)$h->total, $hours));
@@ -256,9 +342,9 @@ class ReportController extends Controller
                     $coords = $db->fetchAll(
                         "SELECT rd.valor FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     );
                     $points = [];
                     foreach ($coords as $c) {
@@ -277,9 +363,9 @@ class ReportController extends Controller
                     $filled = (int)$db->fetch(
                         "SELECT COUNT(*) as t FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     )->t;
                     $analytics['data']['filled'] = $filled;
                     break;
@@ -288,15 +374,15 @@ class ReportController extends Controller
                     $filled = (int)$db->fetch(
                         "SELECT COUNT(*) as t FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}
                          AND rd.valor IS NOT NULL AND rd.valor != ''",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     )->t;
                     $total = (int)$db->fetch(
                         "SELECT COUNT(*) as t FROM record_data rd
                          JOIN records r ON rd.record_id = r.id
-                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}",
-                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta))
+                         WHERE rd.field_id = :fid AND r.deleted_at IS NULL {$this->dateWhere($fechaDesde, $fechaHasta)}{$fieldFilterWhere}",
+                        array_merge(['fid' => $field->id], $this->dateParams($fechaDesde, $fechaHasta), $fieldFilterParams)
                     )->t;
                     $analytics['data']['filled'] = $filled;
                     $analytics['data']['total'] = $total;
@@ -311,17 +397,17 @@ class ReportController extends Controller
             ['uid' => Session::userId()]
         );
 
-        $groupedAnalytics = $this->groupAnalytics($fieldAnalytics);
-
         $this->view('reports.form', [
             'form' => $form,
             'fields' => $fields,
             'fieldAnalytics' => $fieldAnalytics,
-            'groupedAnalytics' => $groupedAnalytics,
             'totalRecords' => $totalRecords,
             'fechaDesde' => $fechaDesde,
             'fechaHasta' => $fechaHasta,
             'favorites' => $favorites,
+            'filterableFields' => $filterableFields,
+            'fieldOptions' => $fieldOptions,
+            'fieldFilters' => $fieldFilters,
         ]);
     }
 
@@ -423,13 +509,14 @@ class ReportController extends Controller
             $fieldLabels = array_map(fn($f) => $f->etiqueta, $fields);
             $fieldIds = array_map(fn($f) => $f->id, $fields);
 
-            $recordsTableHtml = '';
+            $pdfChunks = [];
             $offset = 0;
-            $chunkSize = 500;
+            $dbChunkSize = 500;
+            $pdfChunkSize = 200;
 
             while (true) {
                 $chunk = $db->fetchAll(
-                    "SELECT id, created_at FROM records WHERE form_id = :fid AND deleted_at IS NULL ORDER BY created_at DESC LIMIT " . (int)$chunkSize . " OFFSET " . (int)$offset,
+                    "SELECT id, created_at FROM records WHERE form_id = :fid AND deleted_at IS NULL ORDER BY created_at DESC LIMIT " . (int)$dbChunkSize . " OFFSET " . (int)$offset,
                     ['fid' => $formId]
                 );
                 if (empty($chunk)) break;
@@ -448,26 +535,41 @@ class ReportController extends Controller
                 }
                 unset($chunkData);
 
+                $buffer = [];
                 foreach ($chunk as $record) {
-                    $recordsTableHtml .= '<tr><td>' . $record->id . '</td>';
+                    $vals = [];
                     foreach ($fieldIds as $fid) {
-                        $recordsTableHtml .= '<td>' . htmlspecialchars($dataMap[$record->id][$fid] ?? '', ENT_QUOTES, 'UTF-8') . '</td>';
+                        $vals[] = $dataMap[$record->id][$fid] ?? '';
                     }
-                    $recordsTableHtml .= '</tr>';
-                }
-                unset($dataMap, $chunk);
+                    $buffer[] = ['id' => $record->id, 'values' => $vals];
 
-                $offset += $chunkSize;
+                    if (count($buffer) >= $pdfChunkSize) {
+                        $pdfChunks[] = $buffer;
+                        $buffer = [];
+                    }
+                }
+                if (!empty($buffer)) {
+                    $pdfChunks[] = $buffer;
+                }
+                unset($dataMap, $chunk, $buffer);
+
+                $offset += $dbChunkSize;
             }
 
-            $data = [
+            $headerData = [
                 'title' => "Reporte: {$form->titulo}",
                 'form' => $form,
                 'fieldLabels' => $fieldLabels,
-                'fieldIds' => $fieldIds,
-                'recordsTableHtml' => $recordsTableHtml,
+                'pdfStreamed' => true,
+                'noRecords' => empty($pdfChunks),
             ];
-            $filepath = ExportService::toPdf('reports.pdf', $data);
+            $filepath = ExportService::toPdfForm(
+                "Reporte: {$form->titulo}",
+                'reports.pdf',
+                $headerData,
+                $fieldLabels,
+                $pdfChunks
+            );
             Response::download($filepath);
 
         } elseif ($tipo === 'excel-form') {
@@ -574,27 +676,5 @@ class ReportController extends Controller
         if ($from) $p['rfd'] = $from . ' 00:00:00';
         if ($to) $p['rfh'] = $to . ' 23:59:59';
         return $p;
-    }
-
-    private function groupAnalytics(array $fieldAnalytics): array
-    {
-        $groups = [
-            'numericos'   => ['label' => 'Campos Numéricos', 'icon' => 'fa-calculator', 'types' => ['numero', 'moneda', 'porcentaje'], 'color' => 'blue'],
-            'selecciones' => ['label' => 'Selecciones',       'icon' => 'fa-list',       'types' => ['select', 'radio'],          'color' => 'purple'],
-            'checkboxes'  => ['label' => 'Checkboxes',        'icon' => 'fa-check-square','types' => ['checkbox'],                  'color' => 'green'],
-            'fechas'      => ['label' => 'Fechas',            'icon' => 'fa-calendar',    'types' => ['fecha'],                     'color' => 'indigo'],
-            'horas'       => ['label' => 'Horas',             'icon' => 'fa-clock',       'types' => ['hora'],                      'color' => 'amber'],
-            'gps'         => ['label' => 'Ubicaciones',       'icon' => 'fa-map-marker-alt','types' => ['gps'],                      'color' => 'red'],
-        ];
-
-        $result = [];
-        foreach ($groups as $key => $group) {
-            $fields = array_filter($fieldAnalytics, fn($fa) => in_array($fa['type'], $group['types']));
-            if (!empty($fields)) {
-                $result[$key] = $group;
-                $result[$key]['fields'] = array_values($fields);
-            }
-        }
-        return $result;
     }
 }

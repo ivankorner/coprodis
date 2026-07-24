@@ -43,26 +43,100 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <form method="GET" class="flex flex-wrap items-end gap-3">
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
-                <input type="date" name="fecha_desde" value="<?= $fechaDesde ?? '' ?>"
-                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4" x-data="{ showAdvanced: <?= !empty($fieldFilters) ? 'true' : 'false' ?> }">
+        <form method="GET">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+                    <input type="date" name="fecha_desde" value="<?= $fechaDesde ?? '' ?>"
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+                    <input type="date" name="fecha_hasta" value="<?= $fechaHasta ?? '' ?>"
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
+                    <i class="fas fa-search mr-1"></i> Filtrar
+                </button>
+                <?php if ($fechaDesde || $fechaHasta || !empty($fieldFilters)): ?>
+                <a href="<?= APP_URL ?>/reportes/formulario/<?= $form->id ?>"
+                   class="px-3 py-1.5 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">
+                    Limpiar filtros
+                </a>
+                <?php endif; ?>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
-                <input type="date" name="fecha_hasta" value="<?= $fechaHasta ?? '' ?>"
-                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+
+            <?php if (!empty($filterableFields)): ?>
+            <div class="mt-3 pt-3 border-t border-gray-100">
+                <button type="button" @click="showAdvanced = !showAdvanced"
+                        class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                    <i class="fas" :class="showAdvanced ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                    Filtros avanzados
+                    <?php if (!empty($fieldFilters)): ?>
+                    <span class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-blue-500 rounded-full">
+                        <?= count($fieldFilters) ?>
+                    </span>
+                    <?php endif; ?>
+                </button>
+
+                <div x-show="showAdvanced" x-cloak>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                        <?php foreach ($filterableFields as $ff): $fid = $ff->id; ?>
+                            <?php if (in_array($ff->tipo, ['select', 'radio', 'checkbox']) && !empty($fieldOptions[$fid])): ?>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1"><?= htmlspecialchars($ff->etiqueta) ?></label>
+                                <select name="f_<?= $fid ?>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                    <option value="">Todos</option>
+                                    <?php foreach ($fieldOptions[$fid] as $opt): ?>
+                                    <option value="<?= htmlspecialchars($opt) ?>" <?= ($fieldFilters[$fid]['value'] ?? '') === $opt ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($opt) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php elseif (in_array($ff->tipo, ['numero', 'moneda', 'porcentaje'])): ?>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 mb-1"><?= htmlspecialchars($ff->etiqueta) ?></label>
+                                <div class="flex items-center gap-1">
+                                    <input type="number" step="any" name="f_<?= $fid ?>_min" placeholder="Min"
+                                           value="<?= htmlspecialchars($fieldFilters[$fid]['min'] ?? '') ?>"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <span class="text-gray-400 shrink-0">—</span>
+                                    <input type="number" step="any" name="f_<?= $fid ?>_max" placeholder="Max"
+                                           value="<?= htmlspecialchars($fieldFilters[$fid]['max'] ?? '') ?>"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php if (!empty($fieldFilters)): ?>
+                    <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-100">
+                        <span class="text-xs font-medium text-gray-400 uppercase tracking-wider self-center">Filtros activos:</span>
+                        <?php foreach ($fieldFilters as $fid => $filter): ?>
+                            <?php
+                            $ffLabel = '';
+                            foreach ($filterableFields as $ff) {
+                                if ($ff->id == $fid) { $ffLabel = $ff->etiqueta; break; }
+                            }
+                            ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">
+                                <?= htmlspecialchars($ffLabel) ?>:
+                                <?php if ($filter['type'] === 'eq'): ?>
+                                    <?= htmlspecialchars($filter['value']) ?>
+                                <?php elseif ($filter['type'] === 'range'): ?>
+                                    <?= ($filter['min'] !== '' ? $filter['min'] : '0') ?> - <?= ($filter['max'] !== '' ? $filter['max'] : '∞') ?>
+                                <?php endif; ?>
+                                <a href="?<?= http_build_query(array_filter(array_merge($_GET, ['f_' . $fid => null, 'f_' . $fid . '_min' => null, 'f_' . $fid . '_max' => null]))) ?>"
+                                   class="text-blue-400 hover:text-blue-700 ml-0.5">&times;</a>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">
-                <i class="fas fa-search mr-1"></i> Filtrar
-            </button>
-            <?php if ($fechaDesde || $fechaHasta): ?>
-            <a href="<?= APP_URL ?>/reportes/formulario/<?= $form->id ?>"
-               class="px-3 py-1.5 text-xs font-medium rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">
-                Limpiar filtros
-            </a>
             <?php endif; ?>
         </form>
     </div>
@@ -77,9 +151,6 @@
     $textFields = array_filter($fieldAnalytics, function($fa) use ($textTypes) {
         return in_array($fa['type'], $textTypes);
     });
-    $sepFields = array_filter($fieldAnalytics, function($fa) {
-        return $fa['type'] === 'separador';
-    });
     ?>
 
     <!-- Chart Grid -->
@@ -92,12 +163,13 @@
             </div>
             <div class="p-4">
                 <?php if (in_array($t, ['numero', 'moneda', 'porcentaje'])): ?>
+                <?php if ($d['avg'] !== null || $d['sum'] !== null || $d['min'] !== null || $d['max'] !== null): ?>
                 <div class="flex flex-wrap gap-2 mb-3">
                     <?php if ($d['avg'] !== null): ?>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">Prom: <?= $d['avg'] ?></span>
                     <?php endif; ?>
                     <?php if ($d['sum'] !== null): ?>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">Sum: <?= $d['sum'] ?></span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">Sum: <?= number_format($d['sum'], 0, ',', '.') ?></span>
                     <?php endif; ?>
                     <?php if ($d['min'] !== null): ?>
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">Min: <?= $d['min'] ?></span>
@@ -106,23 +178,40 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">Max: <?= $d['max'] ?></span>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
                 <?php if (!empty($d['distribution'])): ?>
-                <canvas id="histogram-<?= $f->id ?>" height="120"></canvas>
+                <div style="height: 140px;"><canvas id="histogram-<?= $f->id ?>"></canvas></div>
                 <?php else: ?>
                 <p class="text-center text-gray-400 text-sm py-4">Sin datos</p>
                 <?php endif; ?>
 
                 <?php elseif (in_array($t, ['select', 'radio'])): ?>
-                <canvas id="pie-<?= $f->id ?>" height="140"></canvas>
+                <?php if (!empty($d['distribution'])): ?>
+                <div style="height: 180px;"><canvas id="pie-<?= $f->id ?>"></canvas></div>
+                <?php else: ?>
+                <p class="text-center text-gray-400 text-sm py-4">Sin datos</p>
+                <?php endif; ?>
 
                 <?php elseif ($t === 'checkbox'): ?>
-                <canvas id="checkbox-<?= $f->id ?>" height="120"></canvas>
+                <?php if (!empty($d['frequency'])): ?>
+                <div style="height: <?= min(count($d['frequency']) * 28 + 20, 300) ?>px;"><canvas id="checkbox-<?= $f->id ?>"></canvas></div>
+                <?php else: ?>
+                <p class="text-center text-gray-400 text-sm py-4">Sin datos</p>
+                <?php endif; ?>
 
                 <?php elseif ($t === 'fecha'): ?>
-                <canvas id="fecha-<?= $f->id ?>" height="100"></canvas>
+                <?php if (!empty($d['months'])): ?>
+                <div style="height: 140px;"><canvas id="fecha-<?= $f->id ?>"></canvas></div>
+                <?php else: ?>
+                <p class="text-center text-gray-400 text-sm py-4">Sin datos</p>
+                <?php endif; ?>
 
                 <?php elseif ($t === 'hora'): ?>
-                <canvas id="hora-<?= $f->id ?>" height="100"></canvas>
+                <?php if (!empty($d['hours'])): ?>
+                <div style="height: 140px;"><canvas id="hora-<?= $f->id ?>"></canvas></div>
+                <?php else: ?>
+                <p class="text-center text-gray-400 text-sm py-4">Sin datos</p>
+                <?php endif; ?>
 
                 <?php elseif ($t === 'gps'): ?>
                 <p class="text-xs text-gray-500 mb-2"><?= number_format($d['total'] ?? 0) ?> puntos</p>
@@ -151,7 +240,7 @@
     <?php endif; ?>
 
     <!-- Text Fields List -->
-    <?php if (!empty($textFields) || !empty($sepFields)): ?>
+    <?php if (!empty($textFields)): ?>
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="px-6 py-3 border-b border-gray-100 bg-gray-50">
             <h3 class="text-sm font-semibold text-gray-700">Datos registrados</h3>
@@ -161,11 +250,6 @@
             <div class="px-6 py-3 flex items-center justify-between">
                 <span class="text-sm text-gray-700"><?= $f->etiqueta ?></span>
                 <span class="text-sm font-medium text-gray-900"><?= number_format($d['filled'] ?? 0) ?> respuestas</span>
-            </div>
-            <?php endforeach; ?>
-            <?php foreach ($sepFields as $fa): $f = $fa['field']; ?>
-            <div class="px-6 py-2">
-                <span class="text-xs text-gray-400 italic">── Separador: <?= $f->etiqueta ?> ──</span>
             </div>
             <?php endforeach; ?>
         </div>
@@ -202,20 +286,26 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const fieldAnalytics = <?= json_encode($fieldAnalytics) ?>;
-    fieldAnalytics.forEach(fa => {
-        const f = fa.field, d = fa.data, t = fa.type;
+    const fieldAnalytics = <?= json_encode($fieldAnalytics, JSON_UNESCAPED_UNICODE) ?>;
+
+    function createChart(fn) {
+        try { fn(); } catch(e) { console.warn('Chart error:', e); }
+    }
+
+    fieldAnalytics.forEach(function(fa) {
+        var f = fa.field, d = fa.data, t = fa.type;
 
         if ((t === 'numero' || t === 'moneda' || t === 'porcentaje') && d.distribution && d.distribution.length) {
-            const ctx = document.getElementById('histogram-' + f.id);
-            if (ctx) {
+            createChart(function() {
+                var ctx = document.getElementById('histogram-' + f.id);
+                if (!ctx) return;
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: d.distribution.map(r => r.valor),
+                        labels: d.distribution.map(function(r) { return r.valor; }),
                         datasets: [{
                             label: 'Frecuencia',
-                            data: d.distribution.map(r => parseInt(r.total)),
+                            data: d.distribution.map(function(r) { return parseInt(r.total) || 0; }),
                             backgroundColor: 'rgba(59, 130, 246, 0.6)',
                             borderColor: '#3B82F6',
                             borderWidth: 1
@@ -223,26 +313,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } },
                             y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } }
                         }
                     }
                 });
-            }
+            });
         }
 
         if ((t === 'select' || t === 'radio') && d.distribution && d.distribution.length) {
-            const ctx = document.getElementById('pie-' + f.id);
-            if (ctx) {
-                const colors = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
+            createChart(function() {
+                var ctx = document.getElementById('pie-' + f.id);
+                if (!ctx) return;
+                var colors = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16','#F97316','#6366F1'];
                 new Chart(ctx, {
                     type: 'pie',
                     data: {
-                        labels: d.distribution.map(r => r.valor || '(sin respuesta)'),
+                        labels: d.distribution.map(function(r) { return r.valor || '(sin respuesta)'; }),
                         datasets: [{
-                            data: d.distribution.map(r => parseInt(r.total)),
+                            data: d.distribution.map(function(r) { return parseInt(r.total) || 0; }),
                             backgroundColor: colors.slice(0, d.distribution.length),
                             borderWidth: 2,
                             borderColor: '#fff'
@@ -250,19 +342,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } }
                         }
                     }
                 });
-            }
+            });
+        } else if (t === 'select' || t === 'radio') {
+            var el = document.getElementById('pie-' + f.id);
+            if (el) { el.parentElement.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sin datos</p>'; }
         }
 
         if (t === 'checkbox' && d.frequency && Object.keys(d.frequency).length) {
-            const ctx = document.getElementById('checkbox-' + f.id);
-            if (ctx) {
-                const labels = Object.keys(d.frequency).slice(0, 10);
-                const values = Object.values(d.frequency).slice(0, 10);
+            createChart(function() {
+                var ctx = document.getElementById('checkbox-' + f.id);
+                if (!ctx) return;
+                var labels = Object.keys(d.frequency).slice(0, 10);
+                var values = Object.values(d.frequency).slice(0, 10);
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -278,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     options: {
                         indexAxis: 'y',
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } },
@@ -285,19 +383,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 });
-            }
+            });
+        } else if (t === 'checkbox') {
+            var el = document.getElementById('checkbox-' + f.id);
+            if (el) { el.parentElement.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sin datos</p>'; }
         }
 
         if (t === 'fecha' && d.months && d.months.length) {
-            const ctx = document.getElementById('fecha-' + f.id);
-            if (ctx) {
+            createChart(function() {
+                var ctx = document.getElementById('fecha-' + f.id);
+                if (!ctx) return;
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: d.months.map(m => m.mes),
+                        labels: d.months.map(function(m) { return m.mes; }),
                         datasets: [{
                             label: 'Registros',
-                            data: d.months.map(m => parseInt(m.total)),
+                            data: d.months.map(function(m) { return parseInt(m.total) || 0; }),
                             backgroundColor: 'rgba(99, 102, 241, 0.6)',
                             borderColor: '#6366F1',
                             borderWidth: 1
@@ -305,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { grid: { display: false }, ticks: { font: { size: 9 } } },
@@ -312,19 +415,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 });
-            }
+            });
+        } else if (t === 'fecha') {
+            var el = document.getElementById('fecha-' + f.id);
+            if (el) { el.parentElement.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sin datos</p>'; }
         }
 
         if (t === 'hora' && d.hours && d.hours.length) {
-            const ctx = document.getElementById('hora-' + f.id);
-            if (ctx) {
+            createChart(function() {
+                var ctx = document.getElementById('hora-' + f.id);
+                if (!ctx) return;
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: d.hours.map(h => h.hora + ':00'),
+                        labels: d.hours.map(function(h) { return h.hora + ':00'; }),
                         datasets: [{
                             label: 'Registros',
-                            data: d.hours.map(h => parseInt(h.total)),
+                            data: d.hours.map(function(h) { return parseInt(h.total) || 0; }),
                             backgroundColor: 'rgba(245, 158, 11, 0.6)',
                             borderColor: '#F59E0B',
                             borderWidth: 1
@@ -332,6 +439,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { grid: { display: false }, ticks: { font: { size: 9 } } },
@@ -339,31 +447,35 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 });
-            }
+            });
+        } else if (t === 'hora') {
+            var el = document.getElementById('hora-' + f.id);
+            if (el) { el.parentElement.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sin datos</p>'; }
         }
 
         if (t === 'gps' && d.points && d.points.length) {
-            const mapEl = document.getElementById('gps-map-' + f.id);
-            if (mapEl && typeof L !== 'undefined') {
-                const map = L.map(mapEl).setView([d.points[0].lat, d.points[0].lng], 13);
+            createChart(function() {
+                var mapEl = document.getElementById('gps-map-' + f.id);
+                if (!mapEl || typeof L === 'undefined') return;
+                var map = L.map(mapEl).setView([d.points[0].lat, d.points[0].lng], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; OpenStreetMap'
                 }).addTo(map);
-                d.points.forEach(p => {
+                d.points.forEach(function(p) {
                     L.marker([p.lat, p.lng]).addTo(map);
                 });
                 if (d.points.length > 1) {
-                    map.fitBounds(d.points.map(p => [p.lat, p.lng]));
+                    map.fitBounds(d.points.map(function(p) { return [p.lat, p.lng]; }));
                 }
-            }
+            });
         }
     });
 });
 
 function downloadChart(canvasId, filename) {
-    const canvas = document.getElementById(canvasId);
+    var canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    const link = document.createElement('a');
+    var link = document.createElement('a');
     link.download = filename + '.png';
     link.href = canvas.toDataURL('image/png');
     document.body.appendChild(link);

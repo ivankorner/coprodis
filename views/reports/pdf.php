@@ -46,7 +46,7 @@
 
 <?php if (isset($form) && isset($fieldLabels)): ?>
 <h2>Formulario: <?= $form->titulo ?></h2>
-<?php if (!empty($recordsTableHtml)): ?>
+<?php if (!empty($recordsTableHtml) && !isset($pdfStreamed)): ?>
 <table>
     <tr><th>#</th>
     <?php foreach ($fieldLabels as $label): ?>
@@ -55,7 +55,7 @@
     </tr>
     <?= $recordsTableHtml ?>
 </table>
-<?php else: ?>
+<?php elseif (!empty($noRecords) || (empty($recordsTableHtml) && !isset($pdfStreamed))): ?>
 <p style="text-align:center;color:#888;font-size:9pt">No hay registros para este formulario.</p>
 <?php endif; ?>
 <?php endif; ?>

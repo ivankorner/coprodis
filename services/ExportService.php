@@ -106,6 +106,73 @@ class ExportService
         return $filepath;
     }
 
+    public static function toPdfForm(
+        string $title,
+        string $headerView,
+        array $headerData,
+        array $fieldLabels,
+        array $chunks,
+        string $filename = null
+    ): string {
+        $previous = ini_set('memory_limit', '2048M');
+        require_once BASE_PATH . '/vendor/autoload.php';
+
+        $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        $pdf->SetCreator('COPRODIS');
+        $pdf->SetAuthor(APP_NAME);
+        $pdf->SetTitle($title);
+
+        $pdf->setHeaderFont(['helvetica', '', 10]);
+        $pdf->setFooterFont(['helvetica', '', 8]);
+        $pdf->SetDefaultMonospacedFont('courier');
+        $pdf->SetMargins(15, 20, 15);
+        $pdf->SetHeaderMargin(10);
+        $pdf->SetFooterMargin(10);
+        $pdf->SetAutoPageBreak(true, 25);
+
+        $pdf->AddPage();
+
+        $headerHtml = self::renderView($headerView, $headerData);
+        $pdf->writeHTML($headerHtml, true, false, true, false, '');
+
+        foreach ($chunks as $chunk) {
+            $html = self::buildTableHtml($fieldLabels, $chunk);
+            $pdf->writeHTML($html, true, false, true, false, '');
+            if (gc_enabled()) {
+                gc_collect_cycles();
+            }
+        }
+
+        $filename = $filename ?? "form_" . date('Y-m-d_H-i-s') . '.pdf';
+        $filepath = BASE_PATH . "/storage/exports/{$filename}";
+        $pdf->Output($filepath, 'F');
+
+        ini_set('memory_limit', $previous);
+        return $filepath;
+    }
+
+    private static function buildTableHtml(array $fieldLabels, array $rows): string
+    {
+        $html = '<table>';
+        $html .= '<tr><th>#</th>';
+        foreach ($fieldLabels as $label) {
+            $html .= '<th>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</th>';
+        }
+        $html .= '</tr>';
+
+        foreach ($rows as $row) {
+            $html .= '<tr><td>' . (int)$row['id'] . '</td>';
+            foreach ($row['values'] as $val) {
+                $html .= '<td>' . htmlspecialchars($val ?? '', ENT_QUOTES, 'UTF-8') . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+        return $html;
+    }
+
     private static function renderView(string $view, array $data): string
     {
         $viewPath = str_replace('.', '/', $view);
